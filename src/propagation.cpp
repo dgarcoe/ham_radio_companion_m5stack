@@ -2,6 +2,7 @@
 
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include "config.h"
 #include "wifi_manager.h"
 
@@ -90,13 +91,11 @@ static void parse(const String& xml) {
     }
 
     d.bands.clear();
-    // Keep a stable order: lower bands first.
     static const char* order[] = {"80m-40m", "30m-20m", "17m-15m", "12m-10m"};
     for (auto* key : order) {
         auto it = map.find(key);
         if (it != map.end()) d.bands.push_back(it->second);
     }
-    // Append any unrecognized band names.
     for (auto& kv : map) {
         bool already = false;
         for (auto& b : d.bands) if (b.band == kv.first) { already = true; break; }
@@ -107,26 +106,83 @@ static void parse(const String& xml) {
     s_lastFetchMs = millis();
 }
 
+// Fetch one URL, returning the response body or "" plus a status code via *codeOut.
+// Sets *locationOut for redirect responses (301/302/303/307/308).
+static String fetchOne(const String& url, int* codeOut, String* locationOut) {
+    WiFiClient plain;
+    WiFiClientSecure secure;
+    secure.setInsecure(); // HamQSL etc.; we just need the data, not auth.
+
+    HTTPClient http;
+    http.setTimeout(10000);
+    http.setUserAgent("M5HamCompanion/1.0");
+    // We follow redirects manually so we can switch between HTTP and HTTPS clients.
+    http.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
+    const char* hdrs[] = { "Location" };
+    http.collectHeaders(hdrs, 1);
+
+    bool ok;
+    if (url.startsWith("https://")) {
+        ok = http.begin(secure, url);
+    } else {
+        ok = http.begin(plain, url);
+    }
+    if (!ok) {
+        *codeOut = -1;
+        return "";
+    }
+
+    int code = http.GET();
+    *codeOut = code;
+    if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+        if (locationOut) *locationOut = http.header("Location");
+        http.end();
+        return "";
+    }
+    if (code != 200) {
+        http.end();
+        return "";
+    }
+    String body = http.getString();
+    http.end();
+    return body;
+}
+
 bool fetchNow() {
     if (!WifiMgr::isConnected()) { s_status = "no wifi"; return false; }
     auto& c = Config::get();
     if (c.propagationUrl.isEmpty()) { s_status = "no url"; return false; }
 
-    HTTPClient http;
-    http.setTimeout(10000);
-    if (!http.begin(c.propagationUrl)) {
-        s_status = "http begin failed";
-        return false;
-    }
-    int code = http.GET();
-    if (code != 200) {
+    String url = c.propagationUrl;
+    String body;
+    int code = 0;
+    for (int hop = 0; hop < 4; hop++) {
+        String location;
+        body = fetchOne(url, &code, &location);
+        if (code == 200 && body.length()) break;
+        if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+            if (location.isEmpty()) {
+                s_status = String("redirect ") + code + " no Location";
+                return false;
+            }
+            // Resolve scheme-relative redirects by inheriting from the previous URL.
+            if (location.startsWith("//"))      location = (url.startsWith("https://") ? "https:" : "http:") + location;
+            else if (location.startsWith("/")) {
+                int schemeEnd = url.indexOf("://");
+                int hostEnd = url.indexOf('/', schemeEnd >= 0 ? schemeEnd + 3 : 0);
+                String origin = (hostEnd > 0) ? url.substring(0, hostEnd) : url;
+                location = origin + location;
+            }
+            url = location;
+            continue;
+        }
         s_status = String("http ") + code;
-        http.end();
         return false;
     }
-    String body = http.getString();
-    http.end();
-    if (body.isEmpty()) { s_status = "empty body"; return false; }
+    if (body.isEmpty()) {
+        s_status = "no body";
+        return false;
+    }
     parse(body);
     s_status = "ok";
     return true;
@@ -139,7 +195,6 @@ void begin() {
 void loop() {
     static uint32_t lastTry = 0;
     uint32_t now = millis();
-    // Fetch every 30 minutes (or first time once wifi is up).
     bool needFetch =
         (s_data.valid == false && WifiMgr::isConnected() && now - lastTry > 5000) ||
         (s_data.valid && now - s_lastFetchMs > 30UL * 60UL * 1000UL && now - lastTry > 60000);

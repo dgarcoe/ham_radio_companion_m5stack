@@ -26,11 +26,15 @@ struct AppConfig {
     uint16_t clusterPort = 7300;
 
     // Propagation source
-    String propagationUrl = "http://www.hamqsl.com/solarxml.php";
+    String propagationUrl = "https://www.hamqsl.com/solarxml.php";
 
     // Misc
     int8_t utcOffset = 0;     // hours offset for local time display
     bool soundEnabled = true; // audible alerts
+
+    // DX list filters (UI only - alerts use their own per-rule filters).
+    String filterBand = "any";   // "any", "160m", ..., "2m"
+    String filterMode = "any";   // "any", "CW", "SSB", "FT8", "RTTY", "DIGI"
 
     // Alerts
     std::vector<AlertRule> alerts;

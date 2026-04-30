@@ -2,17 +2,14 @@
 
 namespace Ui {
 
-// On-screen keyboard for editing strings. Modal: spins until OK/Cancel.
+// Modal on-screen keyboard for editing strings.
 
 namespace {
 
 constexpr int KB_KEY_W = 30;
 constexpr int KB_KEY_H = 28;
-constexpr int KB_TOP   = 110;
+constexpr int KB_TOP   = 116;
 
-struct KeyDef { const char* lower; const char* upper; };
-
-// 10-column rows + a final row with space/shift/backspace/ok.
 static const char* row1L = "1234567890";
 static const char* row1U = "!@#$%^&*()";
 static const char* row2L = "qwertyuiop";
@@ -26,9 +23,10 @@ bool s_shift = false;
 
 void drawKey(int x, int y, int w, int h, const String& label, bool highlight = false) {
     auto& d = M5.Display;
-    d.fillRoundRect(x, y, w, h, 3, highlight ? COL_TAB_SEL : COL_TAB_BG);
-    d.drawRoundRect(x, y, w, h, 3, COL_DIM);
-    d.setTextColor(COL_FG, highlight ? COL_TAB_SEL : COL_TAB_BG);
+    uint16_t bg = highlight ? COL_ACCENT_D : COL_CARD;
+    d.fillRoundRect(x, y, w, h, 4, bg);
+    d.drawRoundRect(x, y, w, h, 4, COL_BORDER);
+    d.setTextColor(COL_FG, bg);
     d.setTextDatum(middle_center);
     d.setFont(&fonts::Font2);
     d.drawString(label, x + w / 2, y + h / 2);
@@ -44,50 +42,56 @@ void drawRow(const char* row, int rowY) {
 
 void drawKeyboard() {
     auto& d = M5.Display;
-    d.fillRect(0, KB_TOP - 4, SCREEN_W, SCREEN_H - (KB_TOP - 4), COL_BG);
+    d.fillRect(0, KB_TOP - 4, SCREEN_W, SCREEN_H - (KB_TOP - 4), COL_PANEL);
     drawRow(s_shift ? row1U : row1L, KB_TOP);
     drawRow(s_shift ? row2U : row2L, KB_TOP + KB_KEY_H + 2);
     drawRow(s_shift ? row3U : row3L, KB_TOP + (KB_KEY_H + 2) * 2);
     drawRow(s_shift ? row4U : row4L, KB_TOP + (KB_KEY_H + 2) * 3);
 
     int yBot = KB_TOP + (KB_KEY_H + 2) * 4;
-    drawKey(10,  yBot, 60, KB_KEY_H, s_shift ? "shift" : "Shift", s_shift);
+    drawKey(10,  yBot, 60,  KB_KEY_H, s_shift ? "shift" : "Shift", s_shift);
     drawKey(74,  yBot, 130, KB_KEY_H, "space");
-    drawKey(208, yBot, 50, KB_KEY_H, "del");
-    drawKey(262, yBot, 50, KB_KEY_H, "OK");
+    drawKey(208, yBot, 50,  KB_KEY_H, "del");
+    drawKey(262, yBot, 50,  KB_KEY_H, "OK");
 }
 
 void drawHeaderBox(const char* title, const String& value, bool password) {
     auto& d = M5.Display;
-    d.fillRect(0, 0, SCREEN_W, 60, COL_BG);
-    d.drawFastHLine(0, 60, SCREEN_W, COL_DIM);
+    d.fillRect(0, 0, SCREEN_W, KB_TOP - 4, COL_BG);
 
+    // Title strip.
     d.setTextColor(COL_ACCENT, COL_BG);
     d.setFont(&fonts::Font2);
     d.setTextDatum(top_left);
-    d.drawString(title, 6, 4);
+    d.drawString(title, 10, 6);
 
-    String shown = password ? String('*' /*placeholder*/) : value;
-    if (password) {
-        shown = "";
-        for (size_t i = 0; i < value.length(); i++) shown += '*';
-    }
-    d.fillRect(6, 24, SCREEN_W - 12, 32, COL_TAB_BG);
-    d.drawRect(6, 24, SCREEN_W - 12, 32, COL_DIM);
-    d.setTextColor(COL_FG, COL_TAB_BG);
+    // Cancel hint top-right.
+    d.setTextColor(COL_DIM, COL_BG);
+    d.drawString("Cancel", SCREEN_W - 60, 6);
+
+    // Input card.
+    int boxX = 8, boxY = 28, boxW = SCREEN_W - 16, boxH = 56;
+    d.fillRoundRect(boxX, boxY, boxW, boxH, 6, COL_CARD);
+    d.drawRoundRect(boxX, boxY, boxW, boxH, 6, COL_BORDER);
+
+    String shown;
+    if (password) for (size_t i = 0; i < value.length(); i++) shown += '*';
+    else          shown = value;
+
+    d.setTextColor(COL_FG, COL_CARD);
     d.setFont(&fonts::Font4);
     d.setTextDatum(middle_left);
-    d.drawString(shown, 12, 40);
+    d.drawString(shown, boxX + 10, boxY + boxH / 2);
 
-    d.setTextColor(COL_DIM, COL_BG);
-    d.setFont(&fonts::Font2);
-    d.drawString("Cancel", SCREEN_W - 60, 4);
+    // Caret hint.
+    d.setTextColor(COL_ACCENT, COL_CARD);
+    d.drawString("|", boxX + 10 + d.textWidth(shown) + 2, boxY + boxH / 2);
 }
 
 // Returns the character pressed (or 0 if none). Special codes:
 //   1 = shift, 2 = space, 8 = backspace, 10 = OK, 27 = cancel.
 int hitTest(int x, int y) {
-    if (y < 60 && x > SCREEN_W - 70) return 27; // cancel area top-right
+    if (y < 28 && x > SCREEN_W - 70) return 27; // cancel area top-right
     if (y < KB_TOP) return 0;
     int yBot = KB_TOP + (KB_KEY_H + 2) * 4;
 
@@ -158,34 +162,51 @@ bool editInt(const char* title, int* value, int minV, int maxV) {
     int v = *value;
     auto& d = M5.Display;
 
-    auto redraw = [&](){
+    auto redraw = [&]() {
         d.fillScreen(COL_BG);
+
+        // Title.
         d.setTextColor(COL_ACCENT, COL_BG);
         d.setFont(&fonts::Font2);
         d.setTextDatum(top_left);
-        d.drawString(title, 6, 4);
+        d.drawString(title, 10, 8);
 
-        d.setTextColor(COL_FG, COL_BG);
+        // Value card.
+        d.fillRoundRect(40, 36, SCREEN_W - 80, 70, 8, COL_CARD);
+        d.drawRoundRect(40, 36, SCREEN_W - 80, 70, 8, COL_BORDER);
+        d.setTextColor(COL_FG, COL_CARD);
         d.setFont(&fonts::Font7);
         d.setTextDatum(middle_center);
-        d.drawString(String(v), SCREEN_W / 2, 100);
+        d.drawString(String(v), SCREEN_W / 2, 71);
 
-        // Buttons: -10, -1, +1, +10 in a row, then OK / Cancel
-        int bh = 36;
-        auto btn = [&](int bx, int by, int bw, const char* label, uint16_t bg) {
-            d.fillRoundRect(bx, by, bw, bh, 4, bg);
-            d.setTextColor(COL_FG, bg);
-            d.setFont(&fonts::Font2);
+        // Step buttons.
+        int by = 120, bw = 60, bh = 32, gap = 8;
+        int totalW = bw * 4 + gap * 3;
+        int xStart = (SCREEN_W - totalW) / 2;
+        const char* labels[] = { "-10", "-1", "+1", "+10" };
+        for (int i = 0; i < 4; i++) {
+            int bx = xStart + i * (bw + gap);
+            d.fillRoundRect(bx, by, bw, bh, 5, COL_CARD);
+            d.drawRoundRect(bx, by, bw, bh, 5, COL_BORDER);
+            d.setTextColor(COL_FG, COL_CARD);
             d.setTextDatum(middle_center);
-            d.drawString(label, bx + bw / 2, by + bh / 2);
-        };
-        btn(6,   170, 60, "-10", COL_TAB_BG);
-        btn(70,  170, 60, "-1",  COL_TAB_BG);
-        btn(134, 170, 60, "+1",  COL_TAB_BG);
-        btn(198, 170, 60, "+10", COL_TAB_BG);
+            d.setFont(&fonts::Font2);
+            d.drawString(labels[i], bx + bw / 2, by + bh / 2);
+        }
 
-        btn(80,  170 + bh + 8, 80, "Cancel", COL_BAD);
-        btn(170, 170 + bh + 8, 80, "OK",     COL_OK);
+        // Cancel / OK.
+        int by2 = 170, bw2 = 110, bh2 = 36;
+        int xCancel = 24, xOk = SCREEN_W - bw2 - 24;
+        d.fillRoundRect(xCancel, by2, bw2, bh2, 6, COL_BAD);
+        d.drawRoundRect(xCancel, by2, bw2, bh2, 6, COL_BORDER);
+        d.setTextColor(COL_FG, COL_BAD);
+        d.setTextDatum(middle_center);
+        d.drawString("Cancel", xCancel + bw2 / 2, by2 + bh2 / 2);
+
+        d.fillRoundRect(xOk, by2, bw2, bh2, 6, COL_OK);
+        d.drawRoundRect(xOk, by2, bw2, bh2, 6, COL_BORDER);
+        d.setTextColor(COL_BG, COL_OK);
+        d.drawString("OK", xOk + bw2 / 2, by2 + bh2 / 2);
     };
     redraw();
 
@@ -194,21 +215,32 @@ bool editInt(const char* title, int* value, int minV, int maxV) {
         auto t = M5.Touch.getDetail();
         if (t.wasPressed()) {
             int x = t.x, y = t.y;
-            int by = 170, bh = 36;
+
+            int by = 120, bw = 60, bh = 32, gap = 8;
+            int totalW = bw * 4 + gap * 3;
+            int xStart = (SCREEN_W - totalW) / 2;
             if (y >= by && y <= by + bh) {
-                if      (x < 66)  v -= 10;
-                else if (x < 130) v -= 1;
-                else if (x < 194) v += 1;
-                else              v += 10;
-                if (v < minV) v = minV;
-                if (v > maxV) v = maxV;
-                redraw();
+                for (int i = 0; i < 4; i++) {
+                    int bx = xStart + i * (bw + gap);
+                    if (x >= bx && x <= bx + bw) {
+                        if (i == 0) v -= 10;
+                        if (i == 1) v -= 1;
+                        if (i == 2) v += 1;
+                        if (i == 3) v += 10;
+                        if (v < minV) v = minV;
+                        if (v > maxV) v = maxV;
+                        redraw();
+                        break;
+                    }
+                }
                 continue;
             }
-            int by2 = by + bh + 8;
-            if (y >= by2 && y <= by2 + bh) {
-                if (x >= 80 && x <= 160) return false;
-                if (x >= 170 && x <= 250) { *value = v; return true; }
+
+            int by2 = 170, bw2 = 110, bh2 = 36;
+            int xCancel = 24, xOk = SCREEN_W - bw2 - 24;
+            if (y >= by2 && y <= by2 + bh2) {
+                if (x >= xCancel && x <= xCancel + bw2) return false;
+                if (x >= xOk     && x <= xOk     + bw2) { *value = v; return true; }
             }
         }
         delay(10);

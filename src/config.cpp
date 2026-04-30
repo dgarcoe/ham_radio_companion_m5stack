@@ -43,6 +43,8 @@ static void applyJson(const String& json) {
     c.propagationUrl = doc["propagationUrl"] | c.propagationUrl;
     c.utcOffset      = doc["utcOffset"]      | c.utcOffset;
     c.soundEnabled   = doc["soundEnabled"]   | c.soundEnabled;
+    c.filterBand     = doc["filterBand"]     | c.filterBand;
+    c.filterMode     = doc["filterMode"]     | c.filterMode;
 
     if (doc["alerts"].is<JsonArray>()) {
         c.alerts.clear();
@@ -70,6 +72,8 @@ static String currentJson() {
     doc["propagationUrl"] = c.propagationUrl;
     doc["utcOffset"]      = c.utcOffset;
     doc["soundEnabled"]   = c.soundEnabled;
+    doc["filterBand"]     = c.filterBand;
+    doc["filterMode"]     = c.filterMode;
 
     JsonArray arr = doc["alerts"].to<JsonArray>();
     for (auto& a : c.alerts) {

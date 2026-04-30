@@ -9,10 +9,13 @@
   "clusterHost": "dxc.k0xm.net",
   "clusterPort": 7300,
 
-  "propagationUrl": "http://www.hamqsl.com/solarxml.php",
+  "propagationUrl": "https://www.hamqsl.com/solarxml.php",
 
   "utcOffset": 0,
   "soundEnabled": true,
+
+  "filterBand": "any",
+  "filterMode": "any",
 
   "alerts": [
     {

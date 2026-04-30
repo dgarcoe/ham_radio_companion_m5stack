@@ -35,15 +35,25 @@ static String formatDate() {
     return String(buf);
 }
 
-static void drawValueLine(int y, const char* label, const String& value, uint16_t valColor) {
+// Geometry: clock card on top spanning full width, then a status card below.
+static const int kCardX = 8;
+static const int kCardW = SCREEN_W - 16;
+static const int kClockY = CONTENT_BODY_Y + 4;
+static const int kClockH = 78;
+static const int kStatusY = kClockY + kClockH + 6;
+static const int kStatusH = CONTENT_BODY_H - (kClockY - CONTENT_BODY_Y) - kClockH - 12;
+
+static void drawStatusRow(int slot, const char* label, const String& value, uint16_t valColor) {
     auto& d = M5.Display;
-    d.fillRect(0, y, SCREEN_W, 16, COL_BG);
+    int rowH = (kStatusH - 8) / 3;
+    int y = kStatusY + 4 + slot * rowH;
+    d.fillRect(kCardX + 2, y, kCardW - 4, rowH - 2, COL_CARD);
     d.setFont(&fonts::Font2);
-    d.setTextDatum(top_left);
-    d.setTextColor(COL_DIM, COL_BG);
-    d.drawString(label, 8, y);
-    d.setTextColor(valColor, COL_BG);
-    d.drawString(value, 88, y);
+    d.setTextDatum(middle_left);
+    d.setTextColor(COL_DIM, COL_CARD);
+    d.drawString(label, kCardX + 10, y + rowH / 2);
+    d.setTextColor(valColor, COL_CARD);
+    d.drawString(value, kCardX + 78, y + rowH / 2);
 }
 
 void draw(bool full) {
@@ -54,44 +64,50 @@ void draw(bool full) {
         clearContent();
         drawHeader("Home");
 
-        // Big callsign
-        d.setTextColor(COL_FG, COL_BG);
+        // Clock card: callsign on the left, clock+date on the right.
+        drawCard(kCardX, kClockY, kCardW, kClockH);
+        d.setTextColor(COL_FG, COL_CARD);
         d.setFont(&fonts::Font4);
-        d.setTextDatum(top_left);
-        d.drawString(cfg.myCallsign, 8, CONTENT_Y + 28);
+        d.setTextDatum(middle_left);
+        d.drawString(cfg.myCallsign, kCardX + 12, kClockY + 30);
+
+        d.setTextColor(COL_MUTED, COL_CARD);
+        d.setFont(&fonts::Font0);
+        d.drawString("YOUR CALL", kCardX + 12, kClockY + 12);
+
+        // Status card frame.
+        drawCard(kCardX, kStatusY, kCardW, kStatusH);
 
         s_lastClock = ""; s_lastDate = "";
         s_lastWifi = ""; s_lastDx = ""; s_lastProp = "";
     }
 
-    // Big clock (UTC)
+    // Big clock (UTC) on the right side of the clock card.
     String clk = formatClock();
     if (clk != s_lastClock) {
         s_lastClock = clk;
-        d.fillRect(140, CONTENT_Y + 26, 180, 34, COL_BG);
-        d.setTextColor(COL_ACCENT, COL_BG);
+        d.fillRect(kCardX + 130, kClockY + 8, kCardW - 130 - 8, 44, COL_CARD);
+        d.setTextColor(COL_ACCENT, COL_CARD);
         d.setFont(&fonts::Font7);
         d.setTextDatum(top_right);
-        d.drawString(clk, SCREEN_W - 6, CONTENT_Y + 26);
+        d.drawString(clk, kCardX + kCardW - 8, kClockY + 8);
     }
 
     String dat = formatDate();
     if (dat != s_lastDate) {
         s_lastDate = dat;
-        d.fillRect(140, CONTENT_Y + 64, 180, 16, COL_BG);
-        d.setTextColor(COL_DIM, COL_BG);
+        d.fillRect(kCardX + 130, kClockY + 56, kCardW - 130 - 8, 16, COL_CARD);
+        d.setTextColor(COL_DIM, COL_CARD);
         d.setFont(&fonts::Font2);
         d.setTextDatum(top_right);
-        d.drawString(dat, SCREEN_W - 6, CONTENT_Y + 64);
+        d.drawString(dat, kCardX + kCardW - 8, kClockY + 56);
     }
 
-    // Status block
-    int y = CONTENT_Y + 96;
-
+    // Status block.
     String wifiLine;
     uint16_t wifiColor;
     if (WifiMgr::isConnected()) {
-        wifiLine = WifiMgr::ssid() + "  " + WifiMgr::ip() + "  " + String(WifiMgr::rssi()) + "dBm";
+        wifiLine = WifiMgr::ssid() + "  " + WifiMgr::ip();
         wifiColor = COL_OK;
     } else {
         wifiLine = cfg.wifiSsid.length() ? "connecting..." : "(not configured)";
@@ -99,7 +115,7 @@ void draw(bool full) {
     }
     if (wifiLine != s_lastWifi) {
         s_lastWifi = wifiLine;
-        drawValueLine(y, "WiFi:", wifiLine, wifiColor);
+        drawStatusRow(0, "WiFi", wifiLine, wifiColor);
     }
 
     String dxLine = DxCluster::isConnected()
@@ -108,7 +124,7 @@ void draw(bool full) {
     uint16_t dxColor = DxCluster::isConnected() ? COL_OK : COL_WARN;
     if (dxLine != s_lastDx) {
         s_lastDx = dxLine;
-        drawValueLine(y + 18, "DXC:", dxLine, dxColor);
+        drawStatusRow(1, "DXC", dxLine, dxColor);
     }
 
     const auto& p = Propagation::data();
@@ -123,7 +139,7 @@ void draw(bool full) {
     }
     if (propLine != s_lastProp) {
         s_lastProp = propLine;
-        drawValueLine(y + 36, "Sun:", propLine, propColor);
+        drawStatusRow(2, "Sun", propLine, propColor);
     }
 }
 

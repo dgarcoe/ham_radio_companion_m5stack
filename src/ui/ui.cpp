@@ -19,6 +19,9 @@ void drawTabBar() {
     int n = (int)Tab::Count;
     int w = SCREEN_W / n;
 
+    // Background strip.
+    d.fillRect(0, 0, SCREEN_W, TAB_H, COL_BG);
+
     static Icons::Icon kTabIcons[] = {
         Icons::HomeIcon,
         Icons::DxIcon,
@@ -30,38 +33,100 @@ void drawTabBar() {
     for (int i = 0; i < n; i++) {
         int x = i * w;
         bool sel = (i == (int)s_tab);
-        uint16_t bg = sel ? COL_TAB_SEL : COL_TAB_BG;
-        uint16_t fg = sel ? COL_FG      : COL_DIM;
-        d.fillRect(x, 0, w, TAB_H, bg);
 
-        // Icon centered horizontally near the top.
+        if (sel) {
+            // Selected tab: full-width accent strip on top + slightly lighter card.
+            d.fillRect(x + 2, 4, w - 4, TAB_H - 6, COL_CARD_HI);
+            d.fillRect(x + 2, 4, w - 4, 3, COL_ACCENT);
+        }
+
+        uint16_t fg = sel ? COL_FG : COL_DIM;
+        uint16_t bg = sel ? COL_CARD_HI : COL_BG;
+
         int iconX = x + (w - Icons::W) / 2;
-        int iconY = 2;
+        int iconY = 6;
         Icons::draw(iconX, iconY, kTabIcons[i], fg);
 
-        // Label below the icon.
         d.setTextColor(fg, bg);
         d.setTextDatum(middle_center);
         d.setFont(&fonts::Font0);
         d.drawString(kTabLabels[i], x + w / 2, TAB_H - 8);
-
-        // Selected-tab accent stripe at the bottom.
-        if (sel) d.fillRect(x, TAB_H - 2, w, 2, COL_ACCENT);
     }
-    d.drawFastHLine(0, TAB_H, SCREEN_W, COL_DIM);
+    // Soft separator between tab bar and content.
+    d.drawFastHLine(0, TAB_H, SCREEN_W, COL_BORDER);
 }
 
 void clearContent() {
-    M5.Display.fillRect(0, CONTENT_Y, SCREEN_W, CONTENT_H, COL_BG);
+    M5.Display.fillRect(0, CONTENT_Y, SCREEN_W, CONTENT_H, COL_PANEL);
 }
 
 void drawHeader(const char* title) {
+    drawHeader(title, 0);
+}
+
+void drawHeader(const char* title, int /*rightActionsW*/) {
     auto& d = M5.Display;
-    d.setTextColor(COL_ACCENT, COL_BG);
-    d.setTextDatum(top_left);
+    d.fillRect(0, CONTENT_Y, SCREEN_W, HEADER_H, COL_PANEL);
+    d.setTextColor(COL_ACCENT, COL_PANEL);
+    d.setTextDatum(middle_left);
     d.setFont(&fonts::Font2);
-    d.drawString(title, 6, CONTENT_Y + 4);
-    d.drawFastHLine(0, CONTENT_Y + 22, SCREEN_W, COL_DIM);
+    d.drawString(title, 8, CONTENT_Y + HEADER_H / 2);
+    // Hairline separator at the bottom of the header.
+    d.drawFastHLine(0, CONTENT_Y + HEADER_H, SCREEN_W, COL_BORDER);
+}
+
+void drawCard(int x, int y, int w, int h) {
+    drawCard(x, y, w, h, COL_CARD);
+}
+void drawCard(int x, int y, int w, int h, uint16_t fill) {
+    auto& d = M5.Display;
+    d.fillRoundRect(x, y, w, h, 6, fill);
+    d.drawRoundRect(x, y, w, h, 6, COL_BORDER);
+}
+
+Rect drawButton(int x, int y, int w, int h, const char* label,
+                uint16_t bg, uint16_t fg) {
+    auto& d = M5.Display;
+    d.fillRoundRect(x, y, w, h, 5, bg);
+    d.drawRoundRect(x, y, w, h, 5, COL_BORDER);
+    d.setTextColor(fg, bg);
+    d.setTextDatum(middle_center);
+    d.setFont(&fonts::Font2);
+    d.drawString(label, x + w / 2, y + h / 2);
+    return { x, y, w, h };
+}
+
+Rect drawIconButton(int x, int y, int w, int h, const char* label,
+                    const char* const* icon, uint16_t bg, uint16_t fg) {
+    auto& d = M5.Display;
+    d.fillRoundRect(x, y, w, h, 5, bg);
+    d.drawRoundRect(x, y, w, h, 5, COL_BORDER);
+    int textX = x + 8;
+    if (icon) {
+        Icons::draw(x + 6, y + (h - Icons::H) / 2, icon, fg);
+        textX = x + 6 + Icons::W + 4;
+    }
+    d.setTextColor(fg, bg);
+    d.setTextDatum(middle_left);
+    d.setFont(&fonts::Font2);
+    d.drawString(label, textX, y + h / 2);
+    return { x, y, w, h };
+}
+
+Rect drawChip(int x, int y, const char* label, bool selected) {
+    auto& d = M5.Display;
+    d.setFont(&fonts::Font0);
+    int textW = d.textWidth(label);
+    int w = textW + 14;
+    int h = 18;
+    uint16_t bg = selected ? COL_ACCENT_D : COL_CARD;
+    uint16_t fg = selected ? COL_FG       : COL_DIM;
+    d.fillRoundRect(x, y, w, h, 9, bg);
+    d.drawRoundRect(x, y, w, h, 9, selected ? COL_ACCENT : COL_BORDER);
+    d.setTextColor(fg, bg);
+    d.setTextDatum(middle_center);
+    d.drawString(label, x + w / 2, y + h / 2);
+    return { x, y, w, h };
 }
 
 void setTab(Tab t) {
@@ -101,6 +166,7 @@ void loop() {
     if (s_needFullRedraw) {
         d.fillScreen(COL_BG);
         drawTabBar();
+        clearContent();
         switch (s_tab) {
             case Tab::Home:        ScreenHome::draw(true); break;
             case Tab::DxCluster:   ScreenDx::draw(true); break;
@@ -150,16 +216,17 @@ void maybeShowAlertBanner() {
             active = true;
             shownAt = millis();
             auto& d = M5.Display;
-            int by = SCREEN_H - 36;
-            d.fillRect(0, by, SCREEN_W, 36, COL_BANNER);
+            int by = SCREEN_H - 40;
+            d.fillRoundRect(6, by, SCREEN_W - 12, 36, 6, COL_BANNER);
+            d.drawRoundRect(6, by, SCREEN_W - 12, 36, 6, COL_BORDER);
             d.setTextColor(COL_BG, COL_BANNER);
             d.setFont(&fonts::Font2);
             d.setTextDatum(middle_left);
             String line1 = String("ALERT: ") + h.ruleName;
             String line2 = h.spot.dx + " " + String(h.spot.freqKHz, 1) +
                            " kHz " + h.spot.band + " " + h.spot.mode;
-            d.drawString(line1, 6, by + 10);
-            d.drawString(line2, 6, by + 26);
+            d.drawString(line1, 14, by + 11);
+            d.drawString(line2, 14, by + 26);
         }
     } else {
         if (millis() - shownAt > 3500) {

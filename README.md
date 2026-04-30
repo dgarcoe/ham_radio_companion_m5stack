@@ -7,7 +7,8 @@ combines four useful tools in one device:
 
 - **UTC clock** with date and your callsign on the home screen.
 - **DX cluster monitor** — connects to any standard telnet DX cluster and shows
-  the most recent spots (band, frequency, callsign, mode, age).
+  the most recent spots (band, frequency, callsign, mode, age) with on-screen
+  band/mode filters that persist across reboots.
 - **HF propagation dashboard** — fetches the
   [HamQSL solar XML feed](https://www.hamqsl.com/solar.html) and shows SFI,
   sunspots, A / K indices, X-Ray, S/N, MUF, aurora, plus the day/night
@@ -111,10 +112,17 @@ Big UTC clock (NTP-synced), date, your callsign, and a status block with WiFi,
 cluster, and current solar numbers.
 
 ### DX
-Live list of the most recent ~200 spots received from the cluster. Use the `^`
-/ `v` buttons on the right to scroll. Columns: band, frequency (kHz), DX
-callsign, mode (decoded from the comment or guessed from the frequency), and
-age.
+Live list of the most recent ~200 spots received from the cluster. Two filter
+rows at the top let you pick a band (`any` / `160m` / ... / `2m`) and a mode
+(`any` / `CW` / `SSB` / `FT8` / `FT4` / `RTTY` / `DIGI` — the last bucket
+matches all common digital modes). Tap the value pill to step forward, or the
+`<` / `>` buttons for previous/next. The right of the band row shows
+*matching / total* spots. Use the `^` / `v` buttons on the right to scroll the
+list.
+
+Columns: band, frequency (kHz), DX callsign, mode (decoded from the comment or
+guessed from the frequency), and age. Filter selections persist in NVS and the
+config file.
 
 ### Prop
 Solar conditions and HF band conditions table. Tap **Refresh** to force a new
@@ -192,8 +200,12 @@ src/
   it is used verbatim; otherwise we guess from sub-band conventions.
 - HamQSL's XML returns the `<electonflux>` tag with that spelling; we accept
   both spellings to be safe if they ever fix it.
-- The propagation feed is fetched over HTTP (the default URL). If you switch
-  to HTTPS, ensure the HTTPClient library is built with the proper certs.
+- The propagation feed is fetched over HTTPS by default
+  (`https://www.hamqsl.com/solarxml.php`). The HTTP redirect chain
+  (e.g. 301 → HTTPS) is handled manually so plain-HTTP URLs work too. We use
+  `WiFiClientSecure::setInsecure()` because we're only reading public solar
+  data — if you need certificate validation, pass a CA bundle in
+  `propagation.cpp`.
 
 ## License
 

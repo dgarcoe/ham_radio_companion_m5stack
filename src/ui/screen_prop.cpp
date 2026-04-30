@@ -6,6 +6,7 @@
 namespace Ui { namespace ScreenProp {
 
 static String s_lastSig;
+static Rect s_refreshBtn { 0, 0, 0, 0 };
 
 static uint16_t condColor(const String& c) {
     String s = c; s.toLowerCase();
@@ -16,17 +17,30 @@ static uint16_t condColor(const String& c) {
 }
 
 static void drawRefreshButton() {
+    int bw = 96, bh = 22;
+    int bx = SCREEN_W - bw - 8;
+    int by = CONTENT_Y + (HEADER_H - bh) / 2;
+    s_refreshBtn = drawIconButton(bx, by, bw, bh, "Refresh",
+                                  Icons::RefreshIcon, COL_ACCENT_D, COL_FG);
+}
+
+static void drawMetricCell(int x, int y, int w, int h, const char* label, const String& value) {
     auto& d = M5.Display;
-    int bw = 88, bh = 22;
-    int bx = SCREEN_W - bw - 6;
-    int by = CONTENT_Y + 2;
-    d.fillRoundRect(bx, by, bw, bh, 4, COL_TAB_SEL);
-    // Icon on the left, label on the right.
-    Icons::draw(bx + 4, by + 3, Icons::RefreshIcon, COL_FG);
-    d.setTextColor(COL_FG, COL_TAB_SEL);
-    d.setTextDatum(middle_left);
-    d.setFont(&fonts::Font2);
-    d.drawString("Refresh", bx + 4 + Icons::W + 4, by + bh / 2);
+    drawCard(x, y, w, h, COL_CARD);
+    d.setFont(&fonts::Font0);
+    d.setTextColor(COL_MUTED, COL_CARD);
+    d.setTextDatum(top_left);
+    d.drawString(label, x + 6, y + 4);
+
+    d.setFont(&fonts::Font4);
+    d.setTextColor(COL_FG, COL_CARD);
+    d.setTextDatum(middle_center);
+    String shown = value.length() ? value : String("-");
+    if (d.textWidth(shown) > w - 8) {
+        // Fall back to a smaller font if the value would overflow the cell.
+        d.setFont(&fonts::Font2);
+    }
+    d.drawString(shown, x + w / 2, y + h / 2 + 6);
 }
 
 void draw(bool full) {
@@ -35,12 +49,11 @@ void draw(bool full) {
 
     if (full) {
         clearContent();
-        drawHeader("Propagation");
+        drawHeader("Propagation", 110);
         drawRefreshButton();
         s_lastSig = "";
     }
 
-    // Composite signature - only redraw on change.
     String sig = p.valid
         ? (p.solarFlux + "|" + p.aIndex + "|" + p.kIndex + "|" + p.sunspots +
            "|" + p.xrayClass + "|" + p.solarWind + "|" + p.muf + "|" + p.hf +
@@ -49,68 +62,77 @@ void draw(bool full) {
     if (sig == s_lastSig) return;
     s_lastSig = sig;
 
-    int y = CONTENT_Y + 30;
-    d.fillRect(0, y, SCREEN_W, CONTENT_H - 30, COL_BG);
+    int bodyY = CONTENT_BODY_Y + 4;
+    int bodyH = CONTENT_BODY_H - 8;
+    d.fillRect(0, CONTENT_BODY_Y, SCREEN_W, CONTENT_BODY_H, COL_PANEL);
 
     if (!p.valid) {
-        d.setTextColor(COL_DIM, COL_BG);
+        d.setTextColor(COL_DIM, COL_PANEL);
         d.setFont(&fonts::Font2);
         d.setTextDatum(middle_center);
-        d.drawString(String("No data: ") + Propagation::status(), SCREEN_W / 2, y + 30);
-        d.setTextColor(COL_DIM, COL_BG);
-        d.drawString("Tap Refresh after WiFi connects", SCREEN_W / 2, y + 50);
+        d.drawString(String("No data: ") + Propagation::status(),
+                     SCREEN_W / 2, bodyY + 30);
+        d.setTextColor(COL_MUTED, COL_PANEL);
+        d.drawString("Tap Refresh after WiFi connects",
+                     SCREEN_W / 2, bodyY + 50);
         return;
     }
 
-    // First row: SFI / SN / A / K
-    d.setFont(&fonts::Font2);
+    // Two rows of 4 metric cards.
+    int margin = 6;
+    int gap = 4;
+    int colW = (SCREEN_W - margin * 2 - gap * 3) / 4;
+    int cellH = 38;
+    int row1Y = bodyY;
+    int row2Y = row1Y + cellH + gap;
+
+    auto cellX = [&](int i) { return margin + i * (colW + gap); };
+
+    drawMetricCell(cellX(0), row1Y, colW, cellH, "SFI",   p.solarFlux);
+    drawMetricCell(cellX(1), row1Y, colW, cellH, "SN",    p.sunspots);
+    drawMetricCell(cellX(2), row1Y, colW, cellH, "A-IDX", p.aIndex);
+    drawMetricCell(cellX(3), row1Y, colW, cellH, "K-IDX", p.kIndex);
+
+    drawMetricCell(cellX(0), row2Y, colW, cellH, "X-RAY", p.xrayClass);
+    drawMetricCell(cellX(1), row2Y, colW, cellH, "S/N",   p.signalNoise);
+    drawMetricCell(cellX(2), row2Y, colW, cellH, "MUF",   p.muf);
+    drawMetricCell(cellX(3), row2Y, colW, cellH, "AURORA",p.aurora);
+
+    // Band conditions card.
+    int bandsY = row2Y + cellH + gap + 2;
+    int bandsH = bodyY + bodyH - bandsY;
+    drawCard(margin, bandsY, SCREEN_W - margin * 2, bandsH);
+
+    int hdrY = bandsY + 4;
+    d.setFont(&fonts::Font0);
+    d.setTextColor(COL_MUTED, COL_CARD);
     d.setTextDatum(top_left);
-    auto cell = [&](int cx, int cy, const char* label, const String& val, uint16_t valCol) {
-        d.setTextColor(COL_DIM, COL_BG);
-        d.drawString(label, cx, cy);
-        d.setTextColor(valCol, COL_BG);
-        d.setFont(&fonts::Font4);
-        d.drawString(val.length() ? val : String("-"), cx, cy + 14);
-        d.setFont(&fonts::Font2);
-    };
+    d.drawString("BAND",  margin + 10,  hdrY);
+    d.drawString("DAY",   margin + 110, hdrY);
+    d.drawString("NIGHT", margin + 200, hdrY);
 
-    cell(8,   y,      "SFI",     p.solarFlux, COL_FG);
-    cell(85,  y,      "SN",      p.sunspots,  COL_FG);
-    cell(160, y,      "A-idx",   p.aIndex,    COL_FG);
-    cell(235, y,      "K-idx",   p.kIndex,    COL_FG);
-
-    int y2 = y + 50;
-    cell(8,   y2,     "X-Ray",   p.xrayClass, COL_FG);
-    cell(85,  y2,     "S/N",     p.signalNoise, COL_FG);
-    cell(160, y2,     "MUF",     p.muf,       COL_FG);
-    cell(235, y2,     "Aurora",  p.aurora,    COL_FG);
-
-    // Band conditions table
-    int y3 = y2 + 50;
-    d.setTextColor(COL_DIM, COL_BG);
-    d.drawString("Band", 8,  y3);
-    d.drawString("Day",  120, y3);
-    d.drawString("Night", 200, y3);
-
+    int rowsY = hdrY + 14;
+    int rowH = (bandsH - 18) / 4;
+    if (rowH < 14) rowH = 14;
+    d.setFont(&fonts::Font2);
     for (size_t i = 0; i < p.bands.size() && i < 4; i++) {
         const auto& b = p.bands[i];
-        int ry = y3 + 16 + (int)i * 14;
-        d.setTextColor(COL_FG, COL_BG);
-        d.drawString(b.band, 8, ry);
-        d.setTextColor(condColor(b.dayCond), COL_BG);
-        d.drawString(b.dayCond, 120, ry);
-        d.setTextColor(condColor(b.nightCond), COL_BG);
-        d.drawString(b.nightCond, 200, ry);
+        int ry = rowsY + (int)i * rowH;
+        d.setTextColor(COL_FG, COL_CARD);
+        d.setTextDatum(middle_left);
+        d.drawString(b.band, margin + 10, ry + rowH / 2);
+
+        d.setTextColor(condColor(b.dayCond), COL_CARD);
+        d.drawString(b.dayCond.length() ? b.dayCond : String("-"),  margin + 110, ry + rowH / 2);
+        d.setTextColor(condColor(b.nightCond), COL_CARD);
+        d.drawString(b.nightCond.length() ? b.nightCond : String("-"), margin + 200, ry + rowH / 2);
     }
 }
 
 void touch(int x, int y) {
-    int bw = 88, bh = 22;
-    int bx = SCREEN_W - bw - 6;
-    int by = CONTENT_Y + 2;
-    if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
+    if (s_refreshBtn.contains(x, y)) {
         Propagation::fetchNow();
-        s_lastSig = ""; // force redraw
+        s_lastSig = "";
     }
 }
 

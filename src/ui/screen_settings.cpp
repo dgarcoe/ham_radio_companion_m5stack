@@ -1,5 +1,6 @@
 #include "ui_internal.h"
 
+#include <vector>
 #include "../config.h"
 #include "../wifi_manager.h"
 #include "../dx_cluster.h"
@@ -50,54 +51,70 @@ static const Row s_rows[] = {
 static constexpr int kRowCount = sizeof(s_rows) / sizeof(s_rows[0]);
 static int s_scroll = 0;
 static String s_lastSig;
+static const int kRowH = 26;
 
-static int rowsVisible() { return (CONTENT_H - 4) / 24; }
+struct RowHit { Rect r; int idx; };
+static std::vector<RowHit> s_rowHits;
+static Rect s_btnUp { 0, 0, 0, 0 };
+static Rect s_btnDown { 0, 0, 0, 0 };
+
+static int rowsVisible() {
+    return (CONTENT_BODY_H - 8) / kRowH;
+}
+
+static void drawScrollButtons() {
+    int bw = 26, bh = 22;
+    int by = CONTENT_Y + (HEADER_H - bh) / 2;
+    int x1 = SCREEN_W - bw * 2 - 14;
+    int x2 = SCREEN_W - bw - 8;
+    s_btnUp   = drawButton(x1, by, bw, bh, "^", COL_CARD, COL_FG);
+    s_btnDown = drawButton(x2, by, bw, bh, "v", COL_CARD, COL_FG);
+}
 
 static void drawRows() {
     auto& d = M5.Display;
-    d.fillRect(0, CONTENT_Y + 24, SCREEN_W, CONTENT_H - 24, COL_BG);
-    int rv = rowsVisible() - 1; // leave one for hint at bottom
+    s_rowHits.clear();
+    d.fillRect(0, CONTENT_BODY_Y, SCREEN_W, CONTENT_BODY_H, COL_PANEL);
+
+    int yTop = CONTENT_BODY_Y + 4;
+    int rv = rowsVisible();
     for (int i = 0; i < rv; i++) {
         int idx = s_scroll + i;
         if (idx >= kRowCount) break;
         const Row& r = s_rows[idx];
-        int y = CONTENT_Y + 26 + i * 24;
-        d.setTextColor(COL_DIM, COL_BG);
-        d.setFont(&fonts::Font2);
-        d.setTextDatum(top_left);
-        d.drawString(r.label, 8, y);
+        int y = yTop + i * kRowH;
+        int cardX = 6;
+        int cardW = SCREEN_W - 12;
+        int cardH = kRowH - 4;
+        drawCard(cardX, y, cardW, cardH);
 
-        d.setTextColor(COL_FG, COL_BG);
-        d.setTextDatum(top_right);
+        d.setFont(&fonts::Font2);
+        d.setTextColor(COL_DIM, COL_CARD);
+        d.setTextDatum(middle_left);
+        d.drawString(r.label, cardX + 10, y + cardH / 2);
+
+        d.setTextColor(COL_FG, COL_CARD);
+        d.setTextDatum(middle_right);
         String v = r.get();
         if (v.length() > 22) v = v.substring(0, 19) + "...";
-        d.drawString(v, SCREEN_W - 36, y);
+        d.drawString(v, cardX + cardW - 18, y + cardH / 2);
 
-        // Edit chevron
-        d.setTextColor(COL_ACCENT, COL_BG);
-        d.setTextDatum(top_right);
-        d.drawString(">", SCREEN_W - 8, y);
+        d.setTextColor(COL_ACCENT, COL_CARD);
+        d.setTextDatum(middle_right);
+        d.drawString(">", cardX + cardW - 4, y + cardH / 2);
+
+        s_rowHits.push_back({ { cardX, y, cardW, cardH }, idx });
     }
-
-    // Scroll hint
-    int yBot = CONTENT_Y + CONTENT_H - 18;
-    d.setFont(&fonts::Font0);
-    d.setTextColor(COL_DIM, COL_BG);
-    d.setTextDatum(top_center);
-    d.drawString(
-        s_scroll + rv < kRowCount ? "tap row to edit  -  swipe edge to scroll v"
-                                  : "tap row to edit  -  swipe edge to scroll ^",
-        SCREEN_W / 2, yBot);
 }
 
 void draw(bool full) {
     if (full) {
         clearContent();
-        drawHeader("Settings");
+        drawHeader("Settings", 80);
+        drawScrollButtons();
         s_lastSig = "";
     }
 
-    // Detect changes via a coarse signature.
     auto& cfg = Config::get();
     String sig = cfg.wifiSsid + "|" + String((int)cfg.wifiPass.length()) + "|" + cfg.myCallsign +
                  "|" + cfg.clusterHost + "|" + String(cfg.clusterPort) + "|" +
@@ -108,36 +125,40 @@ void draw(bool full) {
     drawRows();
 }
 
-void touch(int x, int y) {
-    int rv = rowsVisible() - 1;
+static void forceFullRedrawAfterModal() {
+    // The keyboard cleared the screen; ask the UI loop to redo this tab.
+    Ui::setTab(Ui::Tab::Settings);
+    auto& d = M5.Display;
+    d.fillScreen(COL_BG);
+    Ui::drawTabBar();
+    Ui::clearContent();
+    Ui::drawHeader("Settings", 80);
+    drawScrollButtons();
+    drawRows();
+    s_lastSig = "redrawn";
+}
 
-    // Edge swipes for scrolling.
-    if (x < 30) {
-        s_scroll = max(0, s_scroll - 1);
+void touch(int x, int y) {
+    int rv = rowsVisible();
+    if (s_btnUp.contains(x, y)) {
+        s_scroll = std::max(0, s_scroll - 1);
         s_lastSig = "";
         return;
     }
-    if (x > SCREEN_W - 30 && y > CONTENT_Y + CONTENT_H / 2) {
+    if (s_btnDown.contains(x, y)) {
         if (s_scroll + rv < kRowCount) s_scroll++;
         s_lastSig = "";
         return;
     }
 
-    int row = (y - (CONTENT_Y + 26)) / 24;
-    if (row < 0 || row >= rv) return;
-    int idx = s_scroll + row;
-    if (idx < 0 || idx >= kRowCount) return;
-    if (s_rows[idx].edit) {
-        s_rows[idx].edit();
-        s_lastSig = "";
-        // After edit/keyboard the screen was wiped; force full repaint at next loop.
-        Ui::setTab(Ui::Tab::Settings);   // no-op but ensures repaint flag handling
-        // Easier: directly request full redraw via the public path.
-        // The keyboard already cleared the screen, so trigger a full redraw:
-        M5.Display.fillScreen(COL_BG);
-        Ui::drawTabBar();
-        drawHeader("Settings");
-        drawRows();
+    for (auto& h : s_rowHits) {
+        if (h.r.contains(x, y)) {
+            if (h.idx >= 0 && h.idx < kRowCount && s_rows[h.idx].edit) {
+                s_rows[h.idx].edit();
+                forceFullRedrawAfterModal();
+            }
+            return;
+        }
     }
 }
 
