@@ -15,8 +15,11 @@ combines four useful tools in one device:
 - **Alerts** — tone + on-screen banner whenever a spot matches one of your
   user-defined rules (band / mode / DXCC prefix / callsign substring).
 
-All settings are configured on-device via a touch keyboard and persisted in
-NVS — no recompile needed once the firmware is flashed.
+Configuration can be supplied either by editing `data/config.json` and uploading
+it to the device's LittleFS partition, or live on-device via a touch keyboard.
+Either way the settings persist across reboots — no recompile needed once the
+firmware is flashed. Each tab has a small icon above its label so the device
+is usable at a glance.
 
 ## Hardware
 
@@ -41,22 +44,63 @@ pio device monitor
 The PlatformIO config (`platformio.ini`) targets `m5stack-core2` with the
 Arduino framework and pulls in `M5Unified` and `ArduinoJson`.
 
-## First-time setup
+## Configuration
 
-1. Power the device on. The first time, all fields are blank/default and there
-   is one disabled example alert rule.
-2. Tap the **Set** tab.
+You can configure the device two ways. Both update the same fields and either
+can be used in isolation.
+
+### Option A — `data/config.json` (recommended for first-time setup)
+
+Edit `data/config.json` in the repo, then upload it to the device's LittleFS
+partition:
+
+```bash
+pio run -t uploadfs
+```
+
+The file's structure (defaults shown):
+
+```json
+{
+  "wifiSsid": "",
+  "wifiPass": "",
+  "myCallsign": "N0CALL",
+  "clusterHost": "dxc.k0xm.net",
+  "clusterPort": 7300,
+  "propagationUrl": "http://www.hamqsl.com/solarxml.php",
+  "utcOffset": 0,
+  "soundEnabled": true,
+  "alerts": [
+    { "name": "20m CW",     "band": "20m", "mode": "CW",  "prefix": "",   "callMatch": "", "enabled": false },
+    { "name": "VK on 15m",  "band": "15m", "mode": "any", "prefix": "VK", "callMatch": "", "enabled": false },
+    { "name": "FT8 anyway", "band": "any", "mode": "FT8", "prefix": "",   "callMatch": "", "enabled": false }
+  ]
+}
+```
+
+Any field you don't set keeps its built-in default. The boot-time serial log
+will print `Config : loaded from file` (or `nvs` / `defaults`) so you can
+verify which source is active.
+
+The load order is: **`/config.json` on LittleFS → NVS → built-in defaults**.
+Whenever you change a setting on-device, the new value is written to *both*
+NVS and the JSON file, so the file always reflects current state and a
+`pio run -t buildfs` afterwards would let you fetch it back.
+
+### Option B — On-device editor
+
+1. Power the device on.
+2. Tap the **Set** tab (gear icon).
 3. Tap **WiFi SSID** and enter the SSID using the on-screen keyboard, then tap
    **OK**.
 4. Tap **WiFi Pass** and enter the WiFi password.
-5. Tap **My Callsign** and enter your callsign — it will be used to log into
-   the DX cluster and is displayed on the Home screen.
+5. Tap **My Callsign** — used to log into the DX cluster and shown on Home.
 6. (Optional) Adjust **Cluster Host** / **Cluster Port** if you don't want the
    default `dxc.k0xm.net:7300`.  Most public clusters work with this client
    (W3LPL, NC7J, K0XM, etc.).
-7. (Optional) Adjust the **Prop URL** if HamQSL is unreachable from your
-   network — any source returning the HamQSL XML schema works.
-8. Tap the **Home** tab. Within ~10 s the WiFi line should show your IP and
+7. (Optional) Adjust **Prop URL** if HamQSL is unreachable from your network
+   — any source returning the HamQSL XML schema works.
+8. Tap the **Home** tab (house icon). Within ~10 s the WiFi line should show your IP and
    RSSI; the DXC line should show *connected*; and the Sun line should show
    `SFI / A / K`.
 
@@ -93,9 +137,10 @@ ints, a single tap toggles **Sound**).
 
 ## Adding alerts
 
-Out of the box there is one disabled example rule named *Example: 20m CW*.
-Toggle it on from the Alerts tab to see how alerts look while you're connected
-to a cluster.
+Out of the box (built-in defaults) there is one disabled example rule named
+*Example: 20m CW*; if you've uploaded the shipped `data/config.json` you'll
+get three example rules. Toggle them on from the Alerts tab to see how alerts
+look while you're connected to a cluster.
 
 A rule has these fields (all optional except `name`):
 
@@ -108,17 +153,18 @@ A rule has these fields (all optional except `name`):
 | `callMatch`| substring to match anywhere inside the callsign        |
 | `enabled`  | `true` / `false`                                       |
 
-Until in-device rule editing lands, you can preload rules at compile time by
-editing the seeded list in `src/config.cpp` (the `if (json.isEmpty())` block)
-and reflashing.
+Until in-device rule editing lands, the easiest way to add or change rules is
+to edit `data/config.json` and run `pio run -t uploadfs`.
 
 ## Project layout
 
 ```
 platformio.ini          PlatformIO target / lib deps
+data/
+  config.json           default user config; uploaded with `pio run -t uploadfs`
 src/
   main.cpp              setup/loop, wires everything together
-  config.h/.cpp         persisted AppConfig (Preferences/NVS, JSON-encoded)
+  config.h/.cpp         persisted AppConfig (LittleFS file + NVS, JSON-encoded)
   wifi_manager.h/.cpp   WiFi STA + NTP time sync
   dx_cluster.h/.cpp     telnet client + DX spot line parser + band/mode helpers
   propagation.h/.cpp    HamQSL XML fetcher + parser
@@ -127,6 +173,7 @@ src/
     ui.h                public UI API
     ui_internal.h       layout constants, colors, screen handler decls
     ui.cpp              tab bar, redraw scheduler, banner overlay
+    icons.h/.cpp        16x16 monochrome icons (home, DX, sun, bell, gear, refresh)
     keyboard.cpp        modal on-screen keyboard + numeric editor
     screen_home.cpp     UTC clock + status block
     screen_dx.cpp       scrollable spot list

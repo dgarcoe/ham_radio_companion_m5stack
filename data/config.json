@@ -1,0 +1,43 @@
+{
+  "_help": "Edit this file then run `pio run -t uploadfs` to push it to the device. Once on-device, in-app changes update both NVS and this file. Fields you don't want to override can be removed.",
+
+  "wifiSsid": "",
+  "wifiPass": "",
+
+  "myCallsign": "N0CALL",
+
+  "clusterHost": "dxc.k0xm.net",
+  "clusterPort": 7300,
+
+  "propagationUrl": "http://www.hamqsl.com/solarxml.php",
+
+  "utcOffset": 0,
+  "soundEnabled": true,
+
+  "alerts": [
+    {
+      "name": "20m CW",
+      "band": "20m",
+      "mode": "CW",
+      "prefix": "",
+      "callMatch": "",
+      "enabled": false
+    },
+    {
+      "name": "VK on 15m",
+      "band": "15m",
+      "mode": "any",
+      "prefix": "VK",
+      "callMatch": "",
+      "enabled": false
+    },
+    {
+      "name": "FT8 anywhere",
+      "band": "any",
+      "mode": "FT8",
+      "prefix": "",
+      "callMatch": "",
+      "enabled": false
+    }
+  ]
+}

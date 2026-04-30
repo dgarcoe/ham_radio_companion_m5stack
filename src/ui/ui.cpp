@@ -1,4 +1,5 @@
 #include "ui_internal.h"
+#include "icons.h"
 
 #include "../alerts.h"
 
@@ -17,15 +18,35 @@ void drawTabBar() {
     auto& d = M5.Display;
     int n = (int)Tab::Count;
     int w = SCREEN_W / n;
+
+    static Icons::Icon kTabIcons[] = {
+        Icons::HomeIcon,
+        Icons::DxIcon,
+        Icons::PropIcon,
+        Icons::AlertsIcon,
+        Icons::SettingsIcon,
+    };
+
     for (int i = 0; i < n; i++) {
         int x = i * w;
         bool sel = (i == (int)s_tab);
-        d.fillRect(x, 0, w, TAB_H, sel ? COL_TAB_SEL : COL_TAB_BG);
-        d.drawFastHLine(x, TAB_H - 1, w, COL_DIM);
-        d.setTextColor(sel ? COL_FG : COL_DIM, sel ? COL_TAB_SEL : COL_TAB_BG);
+        uint16_t bg = sel ? COL_TAB_SEL : COL_TAB_BG;
+        uint16_t fg = sel ? COL_FG      : COL_DIM;
+        d.fillRect(x, 0, w, TAB_H, bg);
+
+        // Icon centered horizontally near the top.
+        int iconX = x + (w - Icons::W) / 2;
+        int iconY = 2;
+        Icons::draw(iconX, iconY, kTabIcons[i], fg);
+
+        // Label below the icon.
+        d.setTextColor(fg, bg);
         d.setTextDatum(middle_center);
-        d.setFont(&fonts::Font2);
-        d.drawString(kTabLabels[i], x + w / 2, TAB_H / 2);
+        d.setFont(&fonts::Font0);
+        d.drawString(kTabLabels[i], x + w / 2, TAB_H - 8);
+
+        // Selected-tab accent stripe at the bottom.
+        if (sel) d.fillRect(x, TAB_H - 2, w, 2, COL_ACCENT);
     }
     d.drawFastHLine(0, TAB_H, SCREEN_W, COL_DIM);
 }

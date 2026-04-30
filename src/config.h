@@ -39,8 +39,19 @@ struct AppConfig {
 class Config {
 public:
     static AppConfig& get();
+
+    // Load order: LittleFS /config.json (if present) -> NVS -> built-in defaults.
+    // Sets `loadedFromFile` / `loadedFromNvs` so the UI can show where the
+    // current settings came from.
     static void load();
-    static void save();
+    static void save();           // persists to NVS (and to LittleFS too if mounted)
+
+    static bool loadedFromFile();
+    static bool loadedFromNvs();
+    static String loadSource();   // "file" / "nvs" / "defaults"
+
 private:
     static AppConfig _cfg;
+    static bool _fromFile;
+    static bool _fromNvs;
 };

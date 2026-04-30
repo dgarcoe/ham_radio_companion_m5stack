@@ -1,4 +1,5 @@
 #include "ui_internal.h"
+#include "icons.h"
 
 #include "../propagation.h"
 
@@ -16,14 +17,16 @@ static uint16_t condColor(const String& c) {
 
 static void drawRefreshButton() {
     auto& d = M5.Display;
-    int bw = 70, bh = 22;
+    int bw = 88, bh = 22;
     int bx = SCREEN_W - bw - 6;
     int by = CONTENT_Y + 2;
     d.fillRoundRect(bx, by, bw, bh, 4, COL_TAB_SEL);
+    // Icon on the left, label on the right.
+    Icons::draw(bx + 4, by + 3, Icons::RefreshIcon, COL_FG);
     d.setTextColor(COL_FG, COL_TAB_SEL);
-    d.setTextDatum(middle_center);
+    d.setTextDatum(middle_left);
     d.setFont(&fonts::Font2);
-    d.drawString("Refresh", bx + bw / 2, by + bh / 2);
+    d.drawString("Refresh", bx + 4 + Icons::W + 4, by + bh / 2);
 }
 
 void draw(bool full) {
@@ -102,7 +105,7 @@ void draw(bool full) {
 }
 
 void touch(int x, int y) {
-    int bw = 70, bh = 22;
+    int bw = 88, bh = 22;
     int bx = SCREEN_W - bw - 6;
     int by = CONTENT_Y + 2;
     if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {

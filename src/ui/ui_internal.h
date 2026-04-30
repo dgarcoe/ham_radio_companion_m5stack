@@ -8,7 +8,7 @@ namespace Ui {
 // Layout constants for the touch UI.
 constexpr int SCREEN_W = 320;
 constexpr int SCREEN_H = 240;
-constexpr int TAB_H    = 32;
+constexpr int TAB_H    = 40;
 constexpr int CONTENT_Y = TAB_H;
 constexpr int CONTENT_H = SCREEN_H - TAB_H;
 

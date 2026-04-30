@@ -12,6 +12,7 @@ static void serialBanner() {
     auto& cfg = Config::get();
     Serial.println();
     Serial.println("=== M5Stack Core2 Ham Radio Companion ===");
+    Serial.printf("Config   : loaded from %s\n", Config::loadSource().c_str());
     Serial.printf("Callsign : %s\n", cfg.myCallsign.c_str());
     Serial.printf("WiFi     : %s\n", cfg.wifiSsid.length() ? cfg.wifiSsid.c_str() : "(unset)");
     Serial.printf("Cluster  : %s:%u\n", cfg.clusterHost.c_str(), cfg.clusterPort);
