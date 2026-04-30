@@ -48,8 +48,7 @@ void draw(bool full) {
     const auto& p = Propagation::data();
 
     if (full) {
-        clearContent();
-        drawHeader("Propagation", 110);
+        // Top header is rendered by ui.cpp; we just paint our action button.
         drawRefreshButton();
         s_lastSig = "";
     }

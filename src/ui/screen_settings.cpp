@@ -64,7 +64,7 @@ static int rowsVisible() {
 
 static void drawScrollButtons() {
     int bw = 26, bh = 22;
-    int by = CONTENT_Y + (HEADER_H - bh) / 2;
+    int by = CONTENT_Y + (SUBHEADER_H - bh) / 2;
     int x1 = SCREEN_W - bw * 2 - 14;
     int x2 = SCREEN_W - bw - 8;
     s_btnUp   = drawButton(x1, by, bw, bh, "^", COL_CARD, COL_FG);
@@ -109,8 +109,6 @@ static void drawRows() {
 
 void draw(bool full) {
     if (full) {
-        clearContent();
-        drawHeader("Settings", 80);
         drawScrollButtons();
         s_lastSig = "";
     }
@@ -126,13 +124,11 @@ void draw(bool full) {
 }
 
 static void forceFullRedrawAfterModal() {
-    // The keyboard cleared the screen; ask the UI loop to redo this tab.
-    Ui::setTab(Ui::Tab::Settings);
+    // The modal keyboard cleared the screen; rebuild chrome and content.
     auto& d = M5.Display;
     d.fillScreen(COL_BG);
-    Ui::drawTabBar();
+    Ui::drawHeader("Settings");
     Ui::clearContent();
-    Ui::drawHeader("Settings", 80);
     drawScrollButtons();
     drawRows();
     s_lastSig = "redrawn";

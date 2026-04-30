@@ -16,6 +16,8 @@ extern const char* const PropIcon[H];
 extern const char* const AlertsIcon[H];
 extern const char* const SettingsIcon[H];
 extern const char* const RefreshIcon[H];
+extern const char* const BeaconIcon[H];     // radio tower with signal lobes
+extern const char* const PotaIcon[H];       // pine tree (parks on the air)
 
 // Draw at (x, y) (top-left), pixels in `color`. Transparent pixels are not
 // touched, so this composites cleanly over an existing background.

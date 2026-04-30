@@ -128,8 +128,6 @@ static void drawHistory() {
 
 void draw(bool full) {
     if (full) {
-        clearContent();
-        drawHeader("Alerts", 180);
         drawTopButtons();
         s_lastDrawnRules = -1;
         s_lastDrawnHistory = -1;

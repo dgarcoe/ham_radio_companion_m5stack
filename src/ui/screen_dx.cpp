@@ -31,9 +31,11 @@ static Rect s_bandPrev{0,0,0,0}, s_bandPill{0,0,0,0}, s_bandNext{0,0,0,0};
 static Rect s_modePrev{0,0,0,0}, s_modePill{0,0,0,0}, s_modeNext{0,0,0,0};
 static Rect s_btnUp{0,0,0,0}, s_btnDown{0,0,0,0};
 
-static int filtersY()    { return CONTENT_BODY_Y + 4; }
+// Filter rows live in the sub-header area + a few pixels of body, leaving the
+// rest of the body for the spot list.
+static int filtersY()    { return CONTENT_Y + 4; }
 static int filtersH()    { return 50; }
-static int listY()       { return filtersY() + filtersH() + 2; }
+static int listY()       { return filtersY() + filtersH() + 4; }
 static int listBottom()  { return SCREEN_H - 4; }
 static int listRightCol(){ return SCREEN_W - 30; }
 
@@ -208,8 +210,7 @@ void draw(bool full) {
     auto& cfg = Config::get();
 
     if (full) {
-        clearContent();
-        drawHeader("DX Cluster");
+        // The top header and content background are drawn by ui.cpp.
         drawFilters();
         drawScrollControls();
         s_lastDrawnSig = -1;

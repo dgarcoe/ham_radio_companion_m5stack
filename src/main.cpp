@@ -6,6 +6,7 @@
 #include "dx_cluster.h"
 #include "propagation.h"
 #include "alerts.h"
+#include "pota.h"
 #include "ui/ui.h"
 
 static void serialBanner() {
@@ -17,7 +18,7 @@ static void serialBanner() {
     Serial.printf("WiFi     : %s\n", cfg.wifiSsid.length() ? cfg.wifiSsid.c_str() : "(unset)");
     Serial.printf("Cluster  : %s:%u\n", cfg.clusterHost.c_str(), cfg.clusterPort);
     Serial.printf("Prop URL : %s\n", cfg.propagationUrl.c_str());
-    Serial.println("Configure via Settings tab on the device.");
+    Serial.println("Tap the Settings tile on the device home screen to configure.");
     Serial.println();
 }
 
@@ -36,6 +37,7 @@ void setup() {
     WifiMgr::begin();
     DxCluster::begin();
     Propagation::begin();
+    Pota::begin();
     Alerts::begin();
     Ui::begin();
 }
@@ -46,6 +48,7 @@ void loop() {
     WifiMgr::loop();
     DxCluster::loop();
     Propagation::loop();
+    Pota::loop();
     Alerts::loop();
     Ui::loop();
 
