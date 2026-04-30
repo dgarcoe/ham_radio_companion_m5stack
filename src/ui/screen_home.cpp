@@ -11,6 +11,7 @@ namespace Ui { namespace ScreenHome {
 
 static String s_lastClock;
 static String s_lastDate;
+static String s_lastCall;
 static String s_lastWifi;
 static String s_lastDx;
 static String s_lastProp;
@@ -35,25 +36,41 @@ static String formatDate() {
     return String(buf);
 }
 
-// Geometry: clock card on top spanning full width, then a status card below.
-static const int kCardX = 8;
-static const int kCardW = SCREEN_W - 16;
-static const int kClockY = CONTENT_BODY_Y + 4;
-static const int kClockH = 78;
-static const int kStatusY = kClockY + kClockH + 6;
-static const int kStatusH = CONTENT_BODY_H - (kClockY - CONTENT_BODY_Y) - kClockH - 12;
+// Layout: card 1 (clock + callsign + date) on top, card 2 (status) below.
+static const int kCardX = 6;
+static const int kCardW = SCREEN_W - 12;
+
+static const int kClockCardY = CONTENT_BODY_Y + 4;
+static const int kClockCardH = 100;
+
+static const int kClockY    = kClockCardY + 4;     // big clock top
+static const int kCallsignY = kClockCardY + 58;    // callsign row top
+static const int kDateY     = kClockCardY + 86;    // date row top
+
+static const int kStatusCardY = kClockCardY + kClockCardH + 4;
+static const int kStatusCardH = CONTENT_BODY_H - (kClockCardH + 12);
+
+// Pick a font for the callsign that fits the card width.
+static const lgfx::IFont* fontForCallsign(const String& s) {
+    auto& d = M5.Display;
+    int avail = kCardW - 24;
+    d.setFont(&fonts::Font4);
+    if (d.textWidth(s) <= avail) return &fonts::Font4;
+    d.setFont(&fonts::Font2);
+    return &fonts::Font2;
+}
 
 static void drawStatusRow(int slot, const char* label, const String& value, uint16_t valColor) {
     auto& d = M5.Display;
-    int rowH = (kStatusH - 8) / 3;
-    int y = kStatusY + 4 + slot * rowH;
-    d.fillRect(kCardX + 2, y, kCardW - 4, rowH - 2, COL_CARD);
+    int rowH = (kStatusCardH - 8) / 3;
+    int y = kStatusCardY + 4 + slot * rowH;
+    d.fillRect(kCardX + 2, y, kCardW - 4, rowH - 1, COL_CARD);
     d.setFont(&fonts::Font2);
     d.setTextDatum(middle_left);
     d.setTextColor(COL_DIM, COL_CARD);
-    d.drawString(label, kCardX + 10, y + rowH / 2);
+    d.drawString(label, kCardX + 12, y + rowH / 2);
     d.setTextColor(valColor, COL_CARD);
-    d.drawString(value, kCardX + 78, y + rowH / 2);
+    d.drawString(value, kCardX + 70, y + rowH / 2);
 }
 
 void draw(bool full) {
@@ -64,43 +81,49 @@ void draw(bool full) {
         clearContent();
         drawHeader("Home");
 
-        // Clock card: callsign on the left, clock+date on the right.
-        drawCard(kCardX, kClockY, kCardW, kClockH);
-        d.setTextColor(COL_FG, COL_CARD);
-        d.setFont(&fonts::Font4);
-        d.setTextDatum(middle_left);
-        d.drawString(cfg.myCallsign, kCardX + 12, kClockY + 30);
+        drawCard(kCardX, kClockCardY,  kCardW, kClockCardH);
+        drawCard(kCardX, kStatusCardY, kCardW, kStatusCardH);
 
-        d.setTextColor(COL_MUTED, COL_CARD);
-        d.setFont(&fonts::Font0);
-        d.drawString("YOUR CALL", kCardX + 12, kClockY + 12);
-
-        // Status card frame.
-        drawCard(kCardX, kStatusY, kCardW, kStatusH);
-
-        s_lastClock = ""; s_lastDate = "";
-        s_lastWifi = ""; s_lastDx = ""; s_lastProp = "";
+        s_lastClock = "";
+        s_lastDate  = "";
+        s_lastCall  = "";
+        s_lastWifi  = "";
+        s_lastDx    = "";
+        s_lastProp  = "";
     }
 
-    // Big clock (UTC) on the right side of the clock card.
+    // Big UTC clock - centered horizontally.
     String clk = formatClock();
     if (clk != s_lastClock) {
         s_lastClock = clk;
-        d.fillRect(kCardX + 130, kClockY + 8, kCardW - 130 - 8, 44, COL_CARD);
+        d.fillRect(kCardX + 2, kClockY, kCardW - 4, 50, COL_CARD);
         d.setTextColor(COL_ACCENT, COL_CARD);
         d.setFont(&fonts::Font7);
-        d.setTextDatum(top_right);
-        d.drawString(clk, kCardX + kCardW - 8, kClockY + 8);
+        d.setTextDatum(top_center);
+        d.drawString(clk, kCardX + kCardW / 2, kClockY);
     }
 
+    // Callsign row - centered, with auto-shrink for long calls. Drawn below
+    // the clock so it never collides with it.
+    if (cfg.myCallsign != s_lastCall) {
+        s_lastCall = cfg.myCallsign;
+        d.fillRect(kCardX + 2, kCallsignY, kCardW - 4, 26, COL_CARD);
+        const auto* font = fontForCallsign(cfg.myCallsign);
+        d.setFont(font);
+        d.setTextColor(COL_FG, COL_CARD);
+        d.setTextDatum(top_center);
+        d.drawString(cfg.myCallsign, kCardX + kCardW / 2, kCallsignY);
+    }
+
+    // Date row.
     String dat = formatDate();
     if (dat != s_lastDate) {
         s_lastDate = dat;
-        d.fillRect(kCardX + 130, kClockY + 56, kCardW - 130 - 8, 16, COL_CARD);
-        d.setTextColor(COL_DIM, COL_CARD);
-        d.setFont(&fonts::Font2);
-        d.setTextDatum(top_right);
-        d.drawString(dat, kCardX + kCardW - 8, kClockY + 56);
+        d.fillRect(kCardX + 2, kDateY, kCardW - 4, 14, COL_CARD);
+        d.setFont(&fonts::Font0);
+        d.setTextColor(COL_MUTED, COL_CARD);
+        d.setTextDatum(top_center);
+        d.drawString(dat, kCardX + kCardW / 2, kDateY);
     }
 
     // Status block.

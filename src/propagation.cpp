@@ -20,12 +20,25 @@ uint32_t lastFetchAgeSeconds() {
     return (millis() - s_lastFetchMs) / 1000UL;
 }
 
-// Tiny tag extractor, sufficient for the HamQSL XML feed.
+// Tiny tag extractor, sufficient for the HamQSL XML feed. Distinguishes
+// e.g. <muf> from <muffactor> by requiring the character after "<tag" to be
+// a tag delimiter (>, whitespace, or /).
 static String tagValue(const String& xml, const String& tag, int from = 0, int* endOut = nullptr) {
-    String openTag = "<" + tag;
-    int s = xml.indexOf(openTag, from);
-    if (s < 0) return "";
-    int gt = xml.indexOf('>', s);
+    String prefix = "<" + tag;
+    int s = from;
+    int gt = -1;
+    while (s < (int)xml.length()) {
+        int p = xml.indexOf(prefix, s);
+        if (p < 0) return "";
+        int after = p + (int)prefix.length();
+        if (after >= (int)xml.length()) return "";
+        char nx = xml[after];
+        if (nx == '>' || nx == ' ' || nx == '\t' || nx == '\n' || nx == '\r' || nx == '/') {
+            gt = xml.indexOf('>', p);
+            break;
+        }
+        s = p + 1;  // false match (e.g. <muffactor> when tag="muf"); keep searching.
+    }
     if (gt < 0) return "";
     String closeTag = "</" + tag + ">";
     int e = xml.indexOf(closeTag, gt);
