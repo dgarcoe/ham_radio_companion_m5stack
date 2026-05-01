@@ -36,23 +36,26 @@ static void drawNowPanel() {
         int cx = x + 8 + b * colW;
         int idx = Beacons::currentStationIndex(b);
 
-        d.setFont(&fonts::Font2);
-        d.setTextColor(COL_ACCENT, COL_CARD);
+        // Frequency label - small, on top.
+        d.setFont(&fonts::Font0);
+        d.setTextColor(COL_MUTED, COL_CARD);
         d.setTextDatum(top_center);
         d.drawString(shortFreq(b), cx + colW / 2, colY);
 
-        d.setFont(&fonts::Font4);
-        d.setTextColor(COL_FG, COL_CARD);
+        // Active callsign - Font2 fits a 6-char call inside our ~58px column.
+        d.setFont(&fonts::Font2);
+        d.setTextColor(COL_ACCENT, COL_CARD);
+        d.setTextDatum(top_center);
         d.drawString(idx >= 0 ? Beacons::kStations[idx].call : String("--"),
-                     cx + colW / 2, colY + 14);
+                     cx + colW / 2, colY + 12);
 
-        d.setFont(&fonts::Font0);
-        d.setTextColor(COL_DIM, COL_CARD);
+        // Grid square (always 6 chars) - clean and informative.
         if (idx >= 0) {
-            // Country, truncated to fit.
-            String c = Beacons::kStations[idx].country;
-            if (c.length() > colW / 5) c = c.substring(0, colW / 5);
-            d.drawString(c, cx + colW / 2, colY + 42);
+            d.setFont(&fonts::Font0);
+            d.setTextColor(COL_DIM, COL_CARD);
+            d.setTextDatum(top_center);
+            d.drawString(Beacons::kStations[idx].grid,
+                         cx + colW / 2, colY + 32);
         }
     }
 

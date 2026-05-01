@@ -11,7 +11,7 @@ static int s_lastSig = -1;
 static Rect s_btnRefresh { 0, 0, 0, 0 };
 static Rect s_btnUp      { 0, 0, 0, 0 };
 static Rect s_btnDown    { 0, 0, 0, 0 };
-static const int kRowH = 26;
+static const int kRowH = 30;
 static int s_visibleRows = 0;
 
 static int subY() { return CONTENT_Y + 2; }
@@ -90,34 +90,36 @@ static void drawList() {
         uint16_t bg = (i & 1) ? COL_BG : COL_PANEL;
         d.fillRect(0, y, w0, kRowH, bg);
 
+        // Top line (Font2, ~16px tall) - reference + activator + freq + mode.
+        // Drawn with middle-left datum so it sits cleanly above the second line.
+        int topMid = y + 9;
         d.setFont(&fonts::Font2);
-        d.setTextDatum(top_left);
-
-        // Reference + activator on top line.
+        d.setTextDatum(middle_left);
         d.setTextColor(COL_ACCENT, bg);
-        d.drawString(sp.reference, 6, y + 2);
+        d.drawString(sp.reference, 6, topMid);
         d.setTextColor(COL_FG, bg);
-        d.drawString(sp.activator.substring(0, 12), 80, y + 2);
-
-        // Freq + mode on right.
+        d.drawString(sp.activator.substring(0, 12), 80, topMid);
         char freq[16];
         snprintf(freq, sizeof(freq), "%.1f", sp.freqKHz);
-        d.setTextColor(COL_FG, bg);
-        d.drawString(freq, 175, y + 2);
-
+        d.drawString(freq, 175, topMid);
         d.setTextColor(COL_WARN, bg);
-        d.drawString(sp.mode.substring(0, 4), 240, y + 2);
+        d.drawString(sp.mode.substring(0, 4), 240, topMid);
 
-        // Park name + location on bottom line.
+        // Bottom line (Font0, ~8px tall) - park name + location code. Sits
+        // *below* the top line; previously they overlapped because Font2
+        // extended to y+18 while this was anchored at y+14.
+        int botMid = y + 22;
         d.setFont(&fonts::Font0);
+        d.setTextDatum(middle_left);
         d.setTextColor(COL_DIM, bg);
         String parkLine = sp.parkName;
         if (sp.location.length()) {
             if (parkLine.length()) parkLine += "  ";
             parkLine += "[" + sp.location + "]";
         }
-        if (parkLine.length() > 50) parkLine = parkLine.substring(0, 50);
-        d.drawString(parkLine, 6, y + 14);
+        // Trim hard to keep within the list area (~44 chars at Font0 width 6).
+        if (parkLine.length() > 44) parkLine = parkLine.substring(0, 44);
+        d.drawString(parkLine, 6, botMid);
     }
 }
 
