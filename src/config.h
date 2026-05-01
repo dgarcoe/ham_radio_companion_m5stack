@@ -20,6 +20,7 @@ struct AppConfig {
 
     // Identity
     String myCallsign = "N0CALL";
+    String myGrid     = "";        // Maidenhead, e.g. "FN30as" - your QTH
 
     // DX cluster
     String clusterHost = "dxc.k0xm.net";

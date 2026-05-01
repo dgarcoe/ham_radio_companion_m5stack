@@ -16,6 +16,7 @@ struct Row {
 static String getSsid()      { return Config::get().wifiSsid; }
 static String getPass()      { String s; for (size_t i = 0; i < Config::get().wifiPass.length(); i++) s += '*'; return s; }
 static String getCall()      { return Config::get().myCallsign; }
+static String getGrid()      { return Config::get().myGrid; }
 static String getHost()      { return Config::get().clusterHost; }
 static String getPort()      { return String(Config::get().clusterPort); }
 static String getOffset()    { return String((int)Config::get().utcOffset); }
@@ -25,6 +26,7 @@ static String getPropUrl()   { return Config::get().propagationUrl; }
 static void editSsid()    { auto& v = Config::get().wifiSsid;       if (Ui::editString("WiFi SSID", &v))      { Config::save(); WifiMgr::reconnect(); } }
 static void editPass()    { auto& v = Config::get().wifiPass;       if (Ui::editString("WiFi Password", &v, true)) { Config::save(); WifiMgr::reconnect(); } }
 static void editCall()    { auto& v = Config::get().myCallsign;     if (Ui::editString("My Callsign", &v))    { Config::save(); DxCluster::reconnect(); } }
+static void editGrid()    { auto& v = Config::get().myGrid;         if (Ui::editString("My QTH grid (FN30as)", &v, false, 8)) { v.trim(); Config::save(); } }
 static void editHost()    { auto& v = Config::get().clusterHost;    if (Ui::editString("DX Cluster Host", &v)){ Config::save(); DxCluster::reconnect(); } }
 static void editPort()    {
     int p = Config::get().clusterPort;
@@ -42,6 +44,7 @@ static const Row s_rows[] = {
     { "WiFi SSID",     getSsid,    editSsid    },
     { "WiFi Pass",     getPass,    editPass    },
     { "My Callsign",   getCall,    editCall    },
+    { "My Grid",       getGrid,    editGrid    },
     { "Cluster Host",  getHost,    editHost    },
     { "Cluster Port",  getPort,    editPort    },
     { "UTC Offset",    getOffset,  editOffset  },
@@ -124,14 +127,10 @@ void draw(bool full) {
 }
 
 static void forceFullRedrawAfterModal() {
-    // The modal keyboard cleared the screen; rebuild chrome and content.
-    auto& d = M5.Display;
-    d.fillScreen(COL_BG);
-    Ui::drawHeader("Settings");
-    Ui::clearContent();
-    drawScrollButtons();
-    drawRows();
-    s_lastSig = "redrawn";
+    // The modal keyboard cleared the screen. Letting the UI loop run its full
+    // redraw path is the simplest way to put the chrome back consistently.
+    Ui::requestFullRedraw();
+    s_lastSig = "";
 }
 
 void touch(int x, int y) {

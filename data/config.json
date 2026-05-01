@@ -5,6 +5,7 @@
   "wifiPass": "",
 
   "myCallsign": "N0CALL",
+  "myGrid": "",
 
   "clusterHost": "dxc.k0xm.net",
   "clusterPort": 7300,

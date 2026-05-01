@@ -38,6 +38,7 @@ static void applyJson(const String& json) {
     c.wifiSsid       = doc["wifiSsid"]       | c.wifiSsid;
     c.wifiPass       = doc["wifiPass"]       | c.wifiPass;
     c.myCallsign     = doc["myCallsign"]     | c.myCallsign;
+    c.myGrid         = doc["myGrid"]         | c.myGrid;
     c.clusterHost    = doc["clusterHost"]    | c.clusterHost;
     c.clusterPort    = doc["clusterPort"]    | c.clusterPort;
     c.propagationUrl = doc["propagationUrl"] | c.propagationUrl;
@@ -67,6 +68,7 @@ static String currentJson() {
     doc["wifiSsid"]       = c.wifiSsid;
     doc["wifiPass"]       = c.wifiPass;
     doc["myCallsign"]     = c.myCallsign;
+    doc["myGrid"]         = c.myGrid;
     doc["clusterHost"]    = c.clusterHost;
     doc["clusterPort"]    = c.clusterPort;
     doc["propagationUrl"] = c.propagationUrl;

@@ -24,11 +24,22 @@ combines several useful tools in one device:
 - **POTA spot feed** — periodically pulls the live activator-spot list from
   `https://api.pota.app/spot/activator` and shows park reference, activator,
   frequency, mode, and location.
+- **Bearing & distance** — given your QTH grid (set once in Settings), enter
+  any 4- or 6-character Maidenhead grid and get the great-circle bearing,
+  16-point compass label, distance (km + mi), and the long-path heading. All
+  offline — pure spherical-trig math.
+- **NOAA space-weather alerts** — fetches
+  `services.swpc.noaa.gov/products/alerts.json` every 15 minutes and lists
+  recent alerts/warnings/watches/summaries with severity-coded codes (red for
+  warnings, orange for alerts/watches).
+- **Battery indicator** — vertical bar in the launcher banner top-right,
+  green/orange/red by level, with a "+" suffix on the readout while charging.
 - **Alerts** — tone + on-screen banner whenever a *DX cluster* spot matches
   one of your user-defined rules (band / mode / DXCC prefix / callsign
   substring).
-- **Settings** — on-device editor for WiFi creds, callsign, cluster, UTC
-  offset, sound, and the propagation URL, with a touch keyboard.
+- **Settings** — on-device editor for WiFi creds, callsign, QTH grid,
+  cluster, UTC offset, sound, and the propagation URL, with a touch
+  keyboard.
 
 Configuration can be supplied either by editing `data/config.json` and
 uploading it to the device's LittleFS partition, or live on-device via the
@@ -91,6 +102,7 @@ The file's structure (defaults shown):
   "wifiSsid": "",
   "wifiPass": "",
   "myCallsign": "N0CALL",
+  "myGrid": "",
   "clusterHost": "dxc.k0xm.net",
   "clusterPort": 7300,
   "propagationUrl": "https://www.hamqsl.com/solarxml.php",
@@ -159,6 +171,20 @@ Live Parks On The Air activator list, refreshed every minute from
 activator's callsign, frequency, mode, the park name, and country code. Tap
 **Refresh** to force an immediate refetch.
 
+### Bearing & Distance
+Two cards at the top — `FROM (your QTH)` (read from `myGrid` in config; tap
+to set it inline) and `TO`, where you enter any Maidenhead grid (4 or 6
+chars). The result card shows the great-circle bearing in degrees with a
+16-point compass label, the short-path distance in km and miles, and the
+long-path heading + distance. Pure offline math, no network needed.
+
+### Space Weather (NOAA SWPC)
+Fetches `services.swpc.noaa.gov/products/alerts.json` every 15 minutes. Each
+entry shows the SWPC product code (color-coded: red for warnings, orange for
+alerts and watches, dim grey for summaries), the issue timestamp, and a
+one-line summary pulled from the message body. Tap **Refresh** for an
+immediate refresh, scroll with `^` / `v`.
+
 ### Alerts
 - **Rules** view: lists each rule with its filters. Tap the `ON`/`OFF` pill
   on the left to toggle a rule. New rules are added by editing
@@ -206,6 +232,8 @@ src/
   propagation.h/.cpp    HamQSL XML fetcher + parser (handles HTTP->HTTPS redirects)
   beacons.h/.cpp        NCDXF beacon table + slot/station math
   pota.h/.cpp           POTA activator-spot fetcher (JSON via HTTPS)
+  noaa.h/.cpp           NOAA SWPC alerts fetcher (JSON via HTTPS)
+  geo.h/.cpp            Maidenhead grid <-> lat/lon, great-circle bearing/distance
   alerts.h/.cpp         filter engine for DX spots, beep + banner queue
   ui/
     ui.h                public UI API (Screen enum, setScreen/goHome, modal editors)
@@ -213,13 +241,15 @@ src/
     ui.cpp              chrome (back-button + title + mini-clock), redraw scheduler,
                         alert banner, hardware-button routing
     icons.h/.cpp        16x16 monochrome icons (house/DX/sun/bell/gear/refresh/
-                        beacon-tower/pine-tree)
+                        beacon-tower/pine-tree/compass-rose/warning-triangle)
     keyboard.cpp        modal on-screen keyboard + numeric editor
     screen_launcher.cpp home: big clock + callsign + tile grid
     screen_dx.cpp       DX spot list with band/mode filter pills
     screen_prop.cpp     solar + HF band conditions
     screen_beacons.cpp  NCDXF "now transmitting" panel + station roster
     screen_pota.cpp     POTA activator list
+    screen_bearing.cpp  Maidenhead bearing/distance/long-path calculator
+    screen_noaa.cpp     NOAA SWPC space-weather alerts
     screen_alerts.cpp   rules list + history (with Rules/History toggle)
     screen_settings.cpp scrollable settings list + edit dispatch
 ```

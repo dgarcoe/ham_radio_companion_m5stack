@@ -11,6 +11,8 @@ enum class Screen {
     Alerts,
     Beacons,
     Pota,
+    Bearing,
+    Noaa,
     Settings,
     Count
 };
@@ -21,6 +23,11 @@ void loop();
 void setScreen(Screen s);
 Screen currentScreen();
 void goHome();   // shorthand for setScreen(Launcher)
+
+// Mark the screen dirty so the next loop iteration runs a full redraw,
+// including the chrome. Useful after a modal (keyboard / int editor)
+// returns and has scribbled over the entire framebuffer.
+void requestFullRedraw();
 
 // Open the on-screen keyboard, modally, to edit a string value.
 bool editString(const char* title, String* value, bool password = false, size_t maxLen = 48);

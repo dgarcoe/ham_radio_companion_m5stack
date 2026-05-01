@@ -19,6 +19,8 @@ static const char* screenTitle(Screen s) {
         case Screen::Alerts:      return "Alerts";
         case Screen::Beacons:     return "NCDXF Beacons";
         case Screen::Pota:        return "POTA";
+        case Screen::Bearing:     return "Bearing & Distance";
+        case Screen::Noaa:        return "Space Weather";
         case Screen::Settings:    return "Settings";
         default:                  return "";
     }
@@ -109,6 +111,7 @@ void setScreen(Screen s) {
 }
 Screen currentScreen() { return s_screen; }
 void goHome() { setScreen(Screen::Launcher); }
+void requestFullRedraw() { s_needFullRedraw = true; }
 
 static void drawCurrentScreenChrome() {
     auto& d = M5.Display;
@@ -130,6 +133,8 @@ static void dispatchDraw(bool full) {
         case Screen::Alerts:      ScreenAlerts::draw(full); break;
         case Screen::Beacons:     ScreenBeacons::draw(full); break;
         case Screen::Pota:        ScreenPota::draw(full); break;
+        case Screen::Bearing:     ScreenBearing::draw(full); break;
+        case Screen::Noaa:        ScreenNoaa::draw(full); break;
         case Screen::Settings:    ScreenSettings::draw(full); break;
         default: break;
     }
@@ -147,6 +152,8 @@ static void dispatchTouch(int x, int y) {
         case Screen::Alerts:      ScreenAlerts::touch(x, y); break;
         case Screen::Beacons:     ScreenBeacons::touch(x, y); break;
         case Screen::Pota:        ScreenPota::touch(x, y); break;
+        case Screen::Bearing:     ScreenBearing::touch(x, y); break;
+        case Screen::Noaa:        ScreenNoaa::touch(x, y); break;
         case Screen::Settings:    ScreenSettings::touch(x, y); break;
         default: break;
     }
