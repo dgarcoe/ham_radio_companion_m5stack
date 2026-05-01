@@ -11,18 +11,20 @@
 #include "../beacons.h"
 #include "../pota.h"
 #include "../noaa.h"
+#include "../contests.h"
+#include "../sun.h"
 
 namespace Ui { namespace ScreenLauncher {
 
-// Top banner (clock + callsign + date + battery) followed by a 4x2 tile grid.
+// Top banner (clock + callsign + date + battery) followed by a 4x3 tile grid.
 
 static const int kBannerH = 56;
 
 static const int kGridY = kBannerH + 4;
 static const int kGridH = SCREEN_H - kGridY - 4;
 static const int kCols = 4;
-static const int kRows = 2;
-static const int kGridGap = 5;
+static const int kRows = 3;
+static const int kGridGap = 4;
 
 // The battery indicator lives in the top-right of the banner; reserve a bit
 // of horizontal space so the callsign/date don't run into it.
@@ -51,7 +53,10 @@ static String propStatus()  {
 static String alertsStatus() {
     int active = 0;
     for (auto& r : Config::get().alerts) if (r.enabled) active++;
-    return String(active) + " on / " + String((unsigned)Alerts::history().size()) + " hits";
+    int hits = (int)Alerts::history().size();
+    // Compact form so it always fits a 4-col launcher tile.
+    if (hits == 0) return String(active) + " active";
+    return String(active) + " on, " + String(hits) + "h";
 }
 static String beaconsStatus() {
     int idx = Beacons::currentStationIndex(0);
@@ -70,6 +75,25 @@ static String noaaStatus() {
     if (Noaa::lastFetchAgeSeconds() == UINT32_MAX) return Noaa::status();
     return String((unsigned)Noaa::count()) + " alerts";
 }
+static String contestsStatus() {
+    if (!Contests::ready()) return "no time";
+    auto& list = Contests::upcoming();
+    if (list.empty()) return "none";
+    time_t now = time(nullptr);
+    int running = 0;
+    for (auto& c : list) if (now >= c.startUtc && now < c.endUtc) running++;
+    if (running > 0) return String(running) + " running";
+    long delta = (long)(list.front().startUtc - now);
+    if (delta < 86400) return "next " + String(delta / 3600) + "h";
+    return "next " + String(delta / 86400) + "d";
+}
+static String graylineStatus() {
+    if (!Sun::ready()) return "no time";
+    float decl = Sun::declinationDeg(time(nullptr));
+    char b[12];
+    snprintf(b, sizeof(b), "%+0.1f%c lat", decl, (char)0xB0);
+    return String(b);
+}
 static String settingsStatus(){ return Config::loadSource(); }
 
 static const Tile kTiles[] = {
@@ -80,6 +104,8 @@ static const Tile kTiles[] = {
     { Screen::Alerts,      "Alerts",     Icons::AlertsIcon,   alertsStatus   },
     { Screen::Bearing,     "Bearing",    Icons::BearingIcon,  bearingStatus  },
     { Screen::Noaa,        "Sp.Wx",      Icons::NoaaIcon,     noaaStatus     },
+    { Screen::Contests,    "Contest",    Icons::ContestIcon,  contestsStatus },
+    { Screen::Grayline,    "Grayline",   Icons::GraylineIcon, graylineStatus },
     { Screen::Settings,    "Settings",   Icons::SettingsIcon, settingsStatus },
 };
 static constexpr int kTileCount = sizeof(kTiles) / sizeof(kTiles[0]);
@@ -93,11 +119,12 @@ static int    s_lastBatteryCharging = -1;
 
 static String formatClock() {
     time_t now = time(nullptr);
-    if (now < 1700000000) return "--:--:--";
+    if (now < 1700000000) return "--:--";
     struct tm tmv;
     gmtime_r(&now, &tmv);
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%02d:%02d:%02d", tmv.tm_hour, tmv.tm_min, tmv.tm_sec);
+    char buf[8];
+    // HH:MM only - HH:MM:SS in Font7 doesn't fit alongside the callsign.
+    snprintf(buf, sizeof(buf), "%02d:%02d", tmv.tm_hour, tmv.tm_min);
     return String(buf);
 }
 
@@ -206,22 +233,24 @@ static void drawTile(const Rect& r, const Tile& t, bool active) {
     d.fillRoundRect(r.x, r.y, r.w, r.h, 6, bg);
     d.drawRoundRect(r.x, r.y, r.w, r.h, 6, active ? COL_ACCENT : COL_BORDER);
 
+    // Compact tile (cells are ~56 px tall in the 4x3 layout): icon top, label
+    // middle, status bottom.
     int iconX = r.x + (r.w - Icons::W) / 2;
-    int iconY = r.y + 8;
+    int iconY = r.y + 4;
     if (t.icon) Icons::draw(iconX, iconY, t.icon, COL_ACCENT);
 
     d.setFont(&fonts::Font2);
     d.setTextColor(COL_FG, bg);
     d.setTextDatum(top_center);
-    d.drawString(t.label, r.x + r.w / 2, r.y + 28);
+    d.drawString(t.label, r.x + r.w / 2, r.y + 22);
 
     String status = t.statusFn ? t.statusFn() : String("");
     if (status.length()) {
         d.setFont(&fonts::Font0);
         d.setTextColor(COL_DIM, bg);
-        // Truncate to fit narrower 4-wide tile (~75 px / 6 = 12 chars).
-        if (status.length() > 13) status = status.substring(0, 13);
-        d.drawString(status, r.x + r.w / 2, r.y + r.h - 12);
+        // Tile is ~75 px wide; Font0 is ~6 px / char, so cap at ~11 chars.
+        if (status.length() > 11) status = status.substring(0, 11);
+        d.drawString(status, r.x + r.w / 2, r.y + r.h - 10);
     }
 }
 

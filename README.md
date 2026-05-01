@@ -32,6 +32,15 @@ combines several useful tools in one device:
   `services.swpc.noaa.gov/products/alerts.json` every 15 minutes and lists
   recent alerts/warnings/watches/summaries with severity-coded codes (red for
   warnings, orange for alerts/watches).
+- **Contest calendar** — offline, computed locally from a curated list of
+  ~19 major HF contests with per-contest recurrence rules. Lists what's
+  running now and what's coming up in the next ~6 months, with mode badges
+  and "starts in N days" / "RUNNING - Nh left" relative times.
+- **Grayline map** — equirectangular world map with the day/night
+  terminator drawn from the current sun position (declination + sub-solar
+  longitude with a small equation-of-time correction). Sun, your QTH, and
+  the 18 NCDXF beacons are plotted as dots so you can see at a glance
+  what's currently in dawn/dusk grayline.
 - **Battery indicator** — vertical bar in the launcher banner top-right,
   green/orange/red by level, with a "+" suffix on the readout while charging.
 - **Alerts** — tone + on-screen banner whenever a *DX cluster* spot matches
@@ -185,6 +194,25 @@ alerts and watches, dim grey for summaries), the issue timestamp, and a
 one-line summary pulled from the message body. Tap **Refresh** for an
 immediate refresh, scroll with `^` / `v`.
 
+### Contest Calendar
+A scrolling list of major HF contests. Computed locally from a curated set
+of recurrence rules ("first Saturday of November, 30 hours") - no network
+required, the only dependency is NTP for the system clock. Each row shows
+the contest name, mode badge (CW cyan / SSB green / RTTY orange / MIX dim),
+the start day-of-week + UTC start time, and a "starts in N days" or
+"RUNNING - Nh left" indicator that ticks once a minute. Coverage includes
+ARRL DX, CQ WW, CQ WPX, IARU HF, Sweepstakes, Field Day, WAE, ARRL 10m /
+160m, RTTY Roundup, and a few NA QSO Parties.
+
+### Grayline
+A 320 x 218 equirectangular world map with day/night shading and the
+current terminator. Computed from the sun's declination (Cooper's formula)
+and sub-solar longitude (clock + a small equation-of-time correction) -
+accurate to better than half a degree. The orange disc is the sub-solar
+point; if `myGrid` is set, your QTH is a green dot. The 18 NCDXF beacon
+stations are plotted as small white pixels so you can spot which beacons
+are in grayline at any moment.
+
 ### Alerts
 - **Rules** view: lists each rule with its filters. Tap the `ON`/`OFF` pill
   on the left to toggle a rule. New rules are added by editing
@@ -233,6 +261,8 @@ src/
   beacons.h/.cpp        NCDXF beacon table + slot/station math
   pota.h/.cpp           POTA activator-spot fetcher (JSON via HTTPS)
   noaa.h/.cpp           NOAA SWPC alerts fetcher (JSON via HTTPS)
+  contests.h/.cpp       Offline major-HF-contest calendar with recurrence rules
+  sun.h/.cpp            Solar declination, sub-solar longitude, altitude helpers
   geo.h/.cpp            Maidenhead grid <-> lat/lon, great-circle bearing/distance
   alerts.h/.cpp         filter engine for DX spots, beep + banner queue
   ui/
@@ -241,7 +271,8 @@ src/
     ui.cpp              chrome (back-button + title + mini-clock), redraw scheduler,
                         alert banner, hardware-button routing
     icons.h/.cpp        16x16 monochrome icons (house/DX/sun/bell/gear/refresh/
-                        beacon-tower/pine-tree/compass-rose/warning-triangle)
+                        beacon-tower/pine-tree/compass-rose/warning-triangle/
+                        trophy/globe-with-terminator)
     keyboard.cpp        modal on-screen keyboard + numeric editor
     screen_launcher.cpp home: big clock + callsign + tile grid
     screen_dx.cpp       DX spot list with band/mode filter pills
@@ -250,6 +281,8 @@ src/
     screen_pota.cpp     POTA activator list
     screen_bearing.cpp  Maidenhead bearing/distance/long-path calculator
     screen_noaa.cpp     NOAA SWPC space-weather alerts
+    screen_contests.cpp Upcoming-and-running HF contest list
+    screen_grayline.cpp Day/night world map with terminator + dots
     screen_alerts.cpp   rules list + history (with Rules/History toggle)
     screen_settings.cpp scrollable settings list + edit dispatch
 ```

@@ -21,6 +21,8 @@ static const char* screenTitle(Screen s) {
         case Screen::Pota:        return "POTA";
         case Screen::Bearing:     return "Bearing & Distance";
         case Screen::Noaa:        return "Space Weather";
+        case Screen::Contests:    return "Contest Calendar";
+        case Screen::Grayline:    return "Grayline Map";
         case Screen::Settings:    return "Settings";
         default:                  return "";
     }
@@ -135,6 +137,8 @@ static void dispatchDraw(bool full) {
         case Screen::Pota:        ScreenPota::draw(full); break;
         case Screen::Bearing:     ScreenBearing::draw(full); break;
         case Screen::Noaa:        ScreenNoaa::draw(full); break;
+        case Screen::Contests:    ScreenContests::draw(full); break;
+        case Screen::Grayline:    ScreenGrayline::draw(full); break;
         case Screen::Settings:    ScreenSettings::draw(full); break;
         default: break;
     }
@@ -154,6 +158,8 @@ static void dispatchTouch(int x, int y) {
         case Screen::Pota:        ScreenPota::touch(x, y); break;
         case Screen::Bearing:     ScreenBearing::touch(x, y); break;
         case Screen::Noaa:        ScreenNoaa::touch(x, y); break;
+        case Screen::Contests:    ScreenContests::touch(x, y); break;
+        case Screen::Grayline:    ScreenGrayline::touch(x, y); break;
         case Screen::Settings:    ScreenSettings::touch(x, y); break;
         default: break;
     }

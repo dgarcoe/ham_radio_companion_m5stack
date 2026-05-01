@@ -43,6 +43,8 @@ namespace ScreenBeacons { void draw(bool full); void touch(int x, int y); }
 namespace ScreenPota    { void draw(bool full); void touch(int x, int y); }
 namespace ScreenBearing { void draw(bool full); void touch(int x, int y); }
 namespace ScreenNoaa    { void draw(bool full); void touch(int x, int y); }
+namespace ScreenContests{ void draw(bool full); void touch(int x, int y); }
+namespace ScreenGrayline{ void draw(bool full); void touch(int x, int y); }
 namespace ScreenSettings{ void draw(bool full); void touch(int x, int y); }
 
 // Geometry helpers shared between screens.
