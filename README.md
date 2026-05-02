@@ -206,13 +206,26 @@ ARRL DX, CQ WW, CQ WPX, IARU HF, Sweepstakes, Field Day, WAE, ARRL 10m /
 160m, RTTY Roundup, and a few NA QSO Parties.
 
 ### Grayline
-A 320 x 218 equirectangular world map with day/night shading and the
+A 320 x 188 equirectangular world map with day/night shading and the
 current terminator. Computed from the sun's declination (Cooper's formula)
 and sub-solar longitude (clock + a small equation-of-time correction) -
 accurate to better than half a degree. The orange disc is the sub-solar
 point; if `myGrid` is set, your QTH is a green dot. The 18 NCDXF beacon
 stations are plotted as small white pixels so you can spot which beacons
 are in grayline at any moment.
+
+The map is overlaid with simplified continent outlines (`coastlines.cpp`,
+hand-curated to ~250 vertices total) so you can see at a glance where
+each beacon and the terminator fall geographically.
+
+A faint cyan dotted contour shows where the predicted **MUF crosses
+21 MHz** right now, computed from a simple empirical model fed with
+the latest SFI from the HamQSL feed. The model is intentionally
+approximate (foF2 ~ 3.5 + 0.045 * SFI * sqrt(cos(zenith)) by day,
+1.8 + 0.008 * SFI by night, MUF ~ foF2 * 3) - it's a "is the band
+open over there?" cue, not a substitute for VOACAP / proppy. The
+threshold and SFI used for the contour are printed in the lower right
+of the map.
 
 ### Satellites
 Predicts upcoming passes for a curated list of popular amateur satellites
@@ -286,6 +299,7 @@ src/
   geo.h/.cpp            Maidenhead grid <-> lat/lon, great-circle bearing/distance
   sat_sgp4.h/.cpp       Compact SGP4-style propagator (J2 + drag, ECI/ECF/LLA)
   satellites.h/.cpp     Celestrak TLE fetcher + pass-window computation
+  coastlines.h/.cpp     Hand-curated low-res continent outline polylines
   alerts.h/.cpp         filter engine for DX spots, beep + banner queue
   ui/
     ui.h                public UI API (Screen enum, setScreen/goHome, modal editors)

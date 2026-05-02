@@ -6,6 +6,8 @@
 #include "../config.h"
 #include "../geo.h"
 #include "../beacons.h"
+#include "../coastlines.h"
+#include "../propagation.h"
 
 namespace Ui { namespace ScreenGrayline {
 
@@ -152,6 +154,63 @@ static void drawMap(time_t now) {
         }
     }
 
+    // Approximate MUF iso-line. Empirical, sufficient to show "where on Earth
+    // is the band currently open". We sweep each row and draw a pixel wherever
+    // the predicted MUF crosses 14 MHz between two adjacent columns. Same for
+    // each column row-to-row, so the contour appears continuous.
+    auto& prop = Propagation::data();
+    float sfi = prop.valid ? prop.solarFlux : 110.0f;
+    auto approxMUF = [&](float lat, float lon) -> float {
+        float latR = deg2rad(lat);
+        float lonR = deg2rad(lon - subLon);
+        float cosz = sinDecl * sinf(latR) + cosDecl * cosf(latR) * cosf(lonR);
+        float foF2;
+        if (cosz > 0.02f) foF2 = 3.5f + 0.045f * sfi * sqrtf(cosz);
+        else              foF2 = 1.8f + 0.008f * sfi;
+        return foF2 * 3.0f;
+    };
+    const float kMufThresh = 21.0f;  // 15 m band: contour falls inside the
+                                     // day region at typical solar fluxes
+                                     // and gives a useful "where's the band
+                                     // open?" indicator.
+    for (int y = s_mapY0; y < s_mapY0 + s_mapH; y += 1) {
+        float lat = 90.0f - (y - s_mapY0) * 180.0f / s_mapH;
+        bool prevAbove = false;
+        for (int x = 0; x < SCREEN_W; x++) {
+            float lon = -180.0f + x * 360.0f / SCREEN_W;
+            float muf = approxMUF(lat, lon);
+            bool above = muf > kMufThresh;
+            if (x > 0 && above != prevAbove) {
+                d.drawPixel(x, y, COL_ACCENT_D);
+            }
+            prevAbove = above;
+        }
+    }
+
+    // Continental outlines on top of the day/night fill so the user can
+    // recognise where they're looking.
+    for (int p = 0; p < Coastlines::kPolylineCount; p++) {
+        const auto& pl = Coastlines::kPolylines[p];
+        for (int i = 1; i < pl.n; i++) {
+            const auto& a = pl.pts[i - 1];
+            const auto& b = pl.pts[i];
+            // Defensive: skip segments that would wrap around the antimeridian.
+            if (fabsf(a.lon - b.lon) > 180.0f) continue;
+            d.drawLine(lonToX(a.lon), latToY(a.lat),
+                       lonToX(b.lon), latToY(b.lat),
+                       COL_DIM);
+        }
+        if (pl.closed && pl.n > 1) {
+            const auto& a = pl.pts[pl.n - 1];
+            const auto& b = pl.pts[0];
+            if (fabsf(a.lon - b.lon) <= 180.0f) {
+                d.drawLine(lonToX(a.lon), latToY(a.lat),
+                           lonToX(b.lon), latToY(b.lat),
+                           COL_DIM);
+            }
+        }
+    }
+
     // Sun symbol at the sub-solar point.
     int sunX = lonToX(subLon);
     int sunY = latToY(decl);
@@ -179,6 +238,21 @@ static void drawMap(time_t now) {
         d.drawPixel(bx + 1, by,     COL_FG);
         d.drawPixel(bx,     by + 1, COL_FG);
     }
+
+    // Tiny legend in the bottom-right so the user knows what the cyan dotted
+    // contour represents. Backed by a thin strip so it's readable on both
+    // the day and night sides of the map.
+    d.setFont(&fonts::Font0);
+    char legend[32];
+    snprintf(legend, sizeof(legend), "MUF=21MHz  SFI=%.0f", sfi);
+    int lw = d.textWidth(legend);
+    int lh = 10;
+    int lx = SCREEN_W - lw - 6;
+    int ly = SCREEN_H - lh - 1;
+    d.fillRect(lx - 2, ly, lw + 4, lh, COL_BG);
+    d.setTextDatum(top_left);
+    d.setTextColor(COL_ACCENT_D, COL_BG);
+    d.drawString(legend, lx, ly + 1);
 }
 
 void draw(bool full) {
