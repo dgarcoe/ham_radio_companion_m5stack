@@ -210,15 +210,16 @@ static void drawBanner(bool full) {
         s_lastCall  = "";
     }
 
-    // Big clock on the left. Clear area is wide enough for HH:MM:SS in Font7.
+    // Big clock on the left. Clear area is wide enough for HH:MM:SS in Font7
+    // — drawn flush to x=0 to use the few pixels of free space on the left.
     String clk = formatClock();
     if (clk != s_lastClock) {
         s_lastClock = clk;
-        d.fillRect(6, 4, 208, kBannerH - 8, COL_BG);
+        d.fillRect(0, 4, 214, kBannerH - 8, COL_BG);
         d.setFont(&fonts::Font7);
         d.setTextColor(COL_ACCENT, COL_BG);
         d.setTextDatum(top_left);
-        d.drawString(clk, 6, 4);
+        d.drawString(clk, 0, 4);
     }
 
     // Callsign + date pushed right to leave room for the wider clock.
