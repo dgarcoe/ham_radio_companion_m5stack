@@ -23,7 +23,9 @@ static const char* screenTitle(Screen s) {
         case Screen::Noaa:        return "Space Weather";
         case Screen::Contests:    return "Contest Calendar";
         case Screen::Grayline:    return "Grayline Map";
+        case Screen::Satellites:  return "Satellite Passes";
         case Screen::Settings:    return "Settings";
+        case Screen::HomeTiles:   return "Home Tiles";
         default:                  return "";
     }
 }
@@ -139,7 +141,9 @@ static void dispatchDraw(bool full) {
         case Screen::Noaa:        ScreenNoaa::draw(full); break;
         case Screen::Contests:    ScreenContests::draw(full); break;
         case Screen::Grayline:    ScreenGrayline::draw(full); break;
+        case Screen::Satellites:  ScreenSatellites::draw(full); break;
         case Screen::Settings:    ScreenSettings::draw(full); break;
+        case Screen::HomeTiles:   ScreenHomeTiles::draw(full); break;
         default: break;
     }
 }
@@ -160,7 +164,9 @@ static void dispatchTouch(int x, int y) {
         case Screen::Noaa:        ScreenNoaa::touch(x, y); break;
         case Screen::Contests:    ScreenContests::touch(x, y); break;
         case Screen::Grayline:    ScreenGrayline::touch(x, y); break;
+        case Screen::Satellites:  ScreenSatellites::touch(x, y); break;
         case Screen::Settings:    ScreenSettings::touch(x, y); break;
+        case Screen::HomeTiles:   ScreenHomeTiles::touch(x, y); break;
         default: break;
     }
 }

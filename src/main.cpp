@@ -9,6 +9,7 @@
 #include "pota.h"
 #include "noaa.h"
 #include "contests.h"
+#include "satellites.h"
 #include "ui/ui.h"
 
 static void serialBanner() {
@@ -42,6 +43,7 @@ void setup() {
     Pota::begin();
     Noaa::begin();
     Contests::begin();
+    Satellites::begin();
     Alerts::begin();
     Ui::begin();
 }
@@ -55,6 +57,7 @@ void loop() {
     Pota::loop();
     Noaa::loop();
     Contests::loop();
+    Satellites::loop();
     Alerts::loop();
     Ui::loop();
 

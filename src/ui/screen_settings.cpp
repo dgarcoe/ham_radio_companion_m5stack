@@ -39,6 +39,14 @@ static void editPort()    {
 static void editOffset()  { int v = Config::get().utcOffset; if (Ui::editInt("UTC offset (h)", &v, -12, 14)) { Config::get().utcOffset = (int8_t)v; Config::save(); } }
 static void toggleSound() { Config::get().soundEnabled = !Config::get().soundEnabled; Config::save(); }
 static void editPropUrl() { auto& v = Config::get().propagationUrl; if (Ui::editString("Propagation URL", &v, false, 80)) Config::save(); }
+static String getHomeTiles() {
+    uint32_t m = Config::get().tileHideMask;
+    int hidden = 0;
+    for (int i = 0; i < 32; i++) if (m & (1u << i)) hidden++;
+    if (hidden == 0) return "all on";
+    return String(hidden) + " hidden";
+}
+static void editHomeTiles() { Ui::setScreen(Screen::HomeTiles); }
 
 static const Row s_rows[] = {
     { "WiFi SSID",     getSsid,    editSsid    },
@@ -50,6 +58,7 @@ static const Row s_rows[] = {
     { "UTC Offset",    getOffset,  editOffset  },
     { "Sound",         getSound,   toggleSound },
     { "Prop URL",      getPropUrl, editPropUrl },
+    { "Home Tiles",    getHomeTiles, editHomeTiles },
 };
 static constexpr int kRowCount = sizeof(s_rows) / sizeof(s_rows[0]);
 static int s_scroll = 0;

@@ -222,6 +222,26 @@ const char* const GraylineIcon[H] = {
     "....########....",
 };
 
+// Cube-shaped satellite body with two solar panels and an antenna - satellites.
+const char* const SatelliteIcon[H] = {
+    "................",
+    ".......##.......",
+    ".......##.......",
+    "......####......",
+    "##.....##.....##",
+    "###...####...###",
+    ".###..####..###.",
+    "..###.####.###..",
+    "...########.....",
+    "....######......",
+    "...########.....",
+    "..###.####.###..",
+    ".###..####..###.",
+    "###...####...###",
+    "##.....##.....##",
+    ".......##.......",
+};
+
 // Circular arrow - refresh button. (top-half clockwise arrow)
 const char* const RefreshIcon[H] = {
     "................",

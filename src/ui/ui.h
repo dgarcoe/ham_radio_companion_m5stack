@@ -15,7 +15,9 @@ enum class Screen {
     Noaa,
     Contests,
     Grayline,
+    Satellites,
     Settings,
+    HomeTiles,
     Count
 };
 

@@ -13,6 +13,7 @@
 #include "../noaa.h"
 #include "../contests.h"
 #include "../sun.h"
+#include "../satellites.h"
 
 namespace Ui { namespace ScreenLauncher {
 
@@ -94,6 +95,16 @@ static String graylineStatus() {
     snprintf(b, sizeof(b), "%+0.1f%c lat", decl, (char)0xB0);
     return String(b);
 }
+static String satellitesStatus() {
+    auto& list = Satellites::passes();
+    if (list.empty()) return Satellites::status();
+    time_t now = time(nullptr);
+    long delta = (long)(list.front().aos - now);
+    if (delta < 0) return "now!";
+    if (delta < 3600)  return "in " + String(delta / 60) + "m";
+    if (delta < 86400) return "in " + String(delta / 3600) + "h";
+    return "in " + String(delta / 86400) + "d";
+}
 static String settingsStatus(){ return Config::loadSource(); }
 
 static const Tile kTiles[] = {
@@ -106,16 +117,19 @@ static const Tile kTiles[] = {
     { Screen::Noaa,        "Sp.Wx",      Icons::NoaaIcon,     noaaStatus     },
     { Screen::Contests,    "Contest",    Icons::ContestIcon,  contestsStatus },
     { Screen::Grayline,    "Grayline",   Icons::GraylineIcon, graylineStatus },
+    { Screen::Satellites,  "Sats",       Icons::SatelliteIcon,satellitesStatus },
     { Screen::Settings,    "Settings",   Icons::SettingsIcon, settingsStatus },
 };
 static constexpr int kTileCount = sizeof(kTiles) / sizeof(kTiles[0]);
 
-static std::vector<Rect> s_tileRects;
+struct TileHit { Rect r; int tileIdx; };
+static std::vector<TileHit> s_tileHits;
 static String s_lastSig;
 static String s_lastClock;
 static String s_lastCall;
 static int    s_lastBatteryLevel = -1;
 static int    s_lastBatteryCharging = -1;
+static uint32_t s_lastHideMask = 0xFFFFFFFFu;
 
 static String formatClock() {
     time_t now = time(nullptr);
@@ -255,19 +269,36 @@ static void drawTile(const Rect& r, const Tile& t, bool active) {
 }
 
 static void drawGrid(bool /*full*/) {
-    s_tileRects.clear();
+    s_tileHits.clear();
+    auto& d = M5.Display;
+
+    // Wipe the entire grid area so reflows after a tile-visibility change
+    // don't leave ghosts behind.
+    d.fillRect(0, kGridY, SCREEN_W, SCREEN_H - kGridY, COL_BG);
+
+    // Build the visible-tile list according to the hide mask. We always show
+    // Settings (the last entry) so the user can never lock themselves out of
+    // editing the configuration on-device.
+    uint32_t mask = Config::get().tileHideMask;
+    int visible[kTileCount];
+    int nVis = 0;
+    for (int i = 0; i < kTileCount; i++) {
+        bool isSettings = (kTiles[i].target == Screen::Settings);
+        if (!isSettings && (mask & (1u << i))) continue;
+        visible[nVis++] = i;
+    }
+
     int cellW = (SCREEN_W - kGridGap * (kCols + 1)) / kCols;
     int cellH = (kGridH - kGridGap * (kRows + 1)) / kRows;
-    for (int row = 0; row < kRows; row++) {
-        for (int col = 0; col < kCols; col++) {
-            int idx = row * kCols + col;
-            if (idx >= kTileCount) break;
-            int x = kGridGap + col * (cellW + kGridGap);
-            int y = kGridY + kGridGap + row * (cellH + kGridGap);
-            Rect r { x, y, cellW, cellH };
-            s_tileRects.push_back(r);
-            drawTile(r, kTiles[idx], false);
-        }
+    for (int slot = 0; slot < nVis; slot++) {
+        if (slot >= kCols * kRows) break;
+        int row = slot / kCols;
+        int col = slot % kCols;
+        int x = kGridGap + col * (cellW + kGridGap);
+        int y = kGridY + kGridGap + row * (cellH + kGridGap);
+        Rect r { x, y, cellW, cellH };
+        s_tileHits.push_back({ r, visible[slot] });
+        drawTile(r, kTiles[visible[slot]], false);
     }
 }
 
@@ -282,18 +313,20 @@ void draw(bool full) {
 
     drawBanner(false);
 
+    uint32_t mask = Config::get().tileHideMask;
     String sig;
     for (auto& t : kTiles) sig += (t.statusFn ? t.statusFn() : String("")) + "|";
-    if (sig != s_lastSig) {
+    if (sig != s_lastSig || mask != s_lastHideMask) {
         s_lastSig = sig;
+        s_lastHideMask = mask;
         drawGrid(false);
     }
 }
 
 void touch(int x, int y) {
-    for (size_t i = 0; i < s_tileRects.size() && i < kTileCount; i++) {
-        if (s_tileRects[i].contains(x, y)) {
-            setScreen(kTiles[i].target);
+    for (auto& h : s_tileHits) {
+        if (h.r.contains(x, y)) {
+            setScreen(kTiles[h.tileIdx].target);
             return;
         }
     }

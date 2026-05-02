@@ -47,8 +47,9 @@ combines several useful tools in one device:
   one of your user-defined rules (band / mode / DXCC prefix / callsign
   substring).
 - **Settings** — on-device editor for WiFi creds, callsign, QTH grid,
-  cluster, UTC offset, sound, and the propagation URL, with a touch
-  keyboard.
+  cluster, UTC offset, sound, the propagation URL, and a **Home Tiles**
+  editor that hides/shows launcher tiles (Settings is always visible).
+  All edits use a touch keyboard or single-tap toggles.
 
 Configuration can be supplied either by editing `data/config.json` and
 uploading it to the device's LittleFS partition, or live on-device via the
@@ -213,6 +214,24 @@ point; if `myGrid` is set, your QTH is a green dot. The 18 NCDXF beacon
 stations are plotted as small white pixels so you can spot which beacons
 are in grayline at any moment.
 
+### Satellites
+Predicts upcoming passes for a curated list of popular amateur satellites
+over your QTH (read from `myGrid`). On the first WiFi-connected boot, TLEs
+are pulled from Celestrak (`amateur` group, fall-back to `stations`) and
+cached on LittleFS; subsequent boots use the cache and refresh at most
+once a day. Each row shows the satellite name, AOS day + UTC time, "in
+Nm/h" relative start, max elevation (color-coded: green >=30 deg, orange
+>=15 deg), AOS->LOS compass headings, and pass duration. The propagator
+models the dominant J2 secular perturbations and the linear drag term
+from the TLE - accurate to a couple of minutes for a 1-2 day horizon.
+The pass list is recomputed every five minutes.
+
+### Home Tiles
+A "Home Tiles" entry in Settings opens a list of every launcher tile with
+an `ON` / `OFF` pill. Tap to hide a tile from the launcher (the grid
+reflows automatically). The Settings tile itself is locked `ON` so you
+can always get back to the editor.
+
 ### Alerts
 - **Rules** view: lists each rule with its filters. Tap the `ON`/`OFF` pill
   on the left to toggle a rule. New rules are added by editing
@@ -225,10 +244,11 @@ Alerts presently match only the DX cluster feed; routing POTA spots through
 the alert engine is a logical next step.
 
 ### Settings
-WiFi, callsign, cluster host/port, UTC offset, sound on/off, and propagation
-URL. Each row opens an editor (full keyboard for strings, +/- buttons for
-ints, a single tap toggles **Sound**). Two scroll buttons in the header walk
-through the list.
+WiFi, callsign, cluster host/port, UTC offset, sound on/off, propagation
+URL, and **Home Tiles**. Each row opens an editor (full keyboard for
+strings, +/- buttons for ints, a single tap toggles **Sound**, the Home
+Tiles row jumps to the tile-visibility editor). Two scroll buttons in the
+header walk through the list.
 
 ## Adding alerts
 
@@ -264,6 +284,8 @@ src/
   contests.h/.cpp       Offline major-HF-contest calendar with recurrence rules
   sun.h/.cpp            Solar declination, sub-solar longitude, altitude helpers
   geo.h/.cpp            Maidenhead grid <-> lat/lon, great-circle bearing/distance
+  sat_sgp4.h/.cpp       Compact SGP4-style propagator (J2 + drag, ECI/ECF/LLA)
+  satellites.h/.cpp     Celestrak TLE fetcher + pass-window computation
   alerts.h/.cpp         filter engine for DX spots, beep + banner queue
   ui/
     ui.h                public UI API (Screen enum, setScreen/goHome, modal editors)
@@ -283,8 +305,10 @@ src/
     screen_noaa.cpp     NOAA SWPC space-weather alerts
     screen_contests.cpp Upcoming-and-running HF contest list
     screen_grayline.cpp Day/night world map with terminator + dots
+    screen_satellites.cpp Upcoming-pass list (AOS/LOS/max elev/duration)
     screen_alerts.cpp   rules list + history (with Rules/History toggle)
     screen_settings.cpp scrollable settings list + edit dispatch
+    screen_home_tiles.cpp ON/OFF toggles for each launcher tile
 ```
 
 ## Notes & caveats

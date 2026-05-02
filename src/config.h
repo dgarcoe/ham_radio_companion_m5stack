@@ -39,6 +39,10 @@ struct AppConfig {
 
     // Alerts
     std::vector<AlertRule> alerts;
+
+    // Bitmask of launcher tiles to hide. Bit N corresponds to the Nth tile
+    // declared in screen_launcher.cpp (DX=0, Prop=1, ...). 0 = all visible.
+    uint32_t tileHideMask = 0;
 };
 
 class Config {
