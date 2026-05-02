@@ -133,12 +133,12 @@ static uint32_t s_lastHideMask = 0xFFFFFFFFu;
 
 static String formatClock() {
     time_t now = time(nullptr);
-    if (now < 1700000000) return "--:--";
+    if (now < 1700000000) return "--:--:--";
     struct tm tmv;
     gmtime_r(&now, &tmv);
-    char buf[8];
-    // HH:MM only - HH:MM:SS in Font7 doesn't fit alongside the callsign.
-    snprintf(buf, sizeof(buf), "%02d:%02d", tmv.tm_hour, tmv.tm_min);
+    char buf[12];
+    snprintf(buf, sizeof(buf), "%02d:%02d:%02d",
+             tmv.tm_hour, tmv.tm_min, tmv.tm_sec);
     return String(buf);
 }
 
@@ -210,20 +210,20 @@ static void drawBanner(bool full) {
         s_lastCall  = "";
     }
 
-    // Big clock on the left.
+    // Big clock on the left. Clear area is wide enough for HH:MM:SS in Font7.
     String clk = formatClock();
     if (clk != s_lastClock) {
         s_lastClock = clk;
-        d.fillRect(6, 4, 180, kBannerH - 8, COL_BG);
+        d.fillRect(6, 4, 208, kBannerH - 8, COL_BG);
         d.setFont(&fonts::Font7);
         d.setTextColor(COL_ACCENT, COL_BG);
         d.setTextDatum(top_left);
         d.drawString(clk, 6, 4);
     }
 
-    // Callsign + date in the middle-right area, leaving space for the battery.
+    // Callsign + date pushed right to leave room for the wider clock.
     int textRight = SCREEN_W - kBatRightMargin;
-    int textLeft  = 188;
+    int textLeft  = 216;
     if (cfg.myCallsign != s_lastCall || full) {
         s_lastCall = cfg.myCallsign;
         d.fillRect(textLeft, 4, textRight - textLeft, kBannerH - 8, COL_BG);

@@ -7,8 +7,8 @@ namespace Ui {
 namespace {
 
 constexpr int KB_KEY_W = 30;
-constexpr int KB_KEY_H = 28;
-constexpr int KB_TOP   = 116;
+constexpr int KB_KEY_H = 24;    // was 28 — shorter keys keep last row on-screen
+constexpr int KB_TOP   = 112;   // was 116 — shift up slightly to give 4px margin
 
 static const char* row1L = "1234567890";
 static const char* row1U = "!@#$%^&*()";
