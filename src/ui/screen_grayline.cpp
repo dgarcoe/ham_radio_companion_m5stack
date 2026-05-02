@@ -159,7 +159,11 @@ static void drawMap(time_t now) {
     // the predicted MUF crosses 14 MHz between two adjacent columns. Same for
     // each column row-to-row, so the contour appears continuous.
     auto& prop = Propagation::data();
-    float sfi = prop.valid ? prop.solarFlux : 110.0f;
+    float sfi = 110.0f;
+    if (prop.valid) {
+        float v = prop.solarFlux.toFloat();
+        if (v > 0) sfi = v;
+    }
     auto approxMUF = [&](float lat, float lon) -> float {
         float latR = deg2rad(lat);
         float lonR = deg2rad(lon - subLon);
