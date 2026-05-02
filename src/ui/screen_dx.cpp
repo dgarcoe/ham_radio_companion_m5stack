@@ -2,8 +2,10 @@
 
 #include <vector>
 #include <algorithm>
+#include <string.h>
 #include "../dx_cluster.h"
 #include "../config.h"
+#include "../callsign.h"
 
 namespace Ui { namespace ScreenDx {
 
@@ -20,6 +22,12 @@ static const char* kModes[] = {
 };
 static constexpr int kModeCount = sizeof(kModes) / sizeof(kModes[0]);
 
+// Continent filter has just two states: show everything, or show only spots
+// whose spotter is on the same continent as the user's callsign. The pill
+// label shows the detected continent in brackets when "my" is active.
+static const char* kConts[] = { "any", "my" };
+static constexpr int kContCount = sizeof(kConts) / sizeof(kConts[0]);
+
 static int s_scroll = 0;
 static const int kRowH = 18;
 static int s_visibleRows = 0;
@@ -29,12 +37,13 @@ static int s_lastDrawnSig = -1;
 // Hit rects.
 static Rect s_bandPrev{0,0,0,0}, s_bandPill{0,0,0,0}, s_bandNext{0,0,0,0};
 static Rect s_modePrev{0,0,0,0}, s_modePill{0,0,0,0}, s_modeNext{0,0,0,0};
+static Rect s_contPrev{0,0,0,0}, s_contPill{0,0,0,0}, s_contNext{0,0,0,0};
 static Rect s_btnUp{0,0,0,0}, s_btnDown{0,0,0,0};
 
 // Filter rows live in the sub-header area + a few pixels of body, leaving the
 // rest of the body for the spot list.
 static int filtersY()    { return CONTENT_Y + 4; }
-static int filtersH()    { return 50; }
+static int filtersH()    { return 76; }
 static int listY()       { return filtersY() + filtersH() + 4; }
 static int listBottom()  { return SCREEN_H - 4; }
 static int listRightCol(){ return SCREEN_W - 30; }
@@ -59,6 +68,15 @@ static bool matchesFilter(const DxSpot& sp) {
         } else if (want != have) {
             return false;
         }
+    }
+    if (cfg.filterCont == "my") {
+        const char* mine = Callsign::continent(cfg.myCallsign);
+        const char* his  = Callsign::continent(sp.spotter);
+        // If we can't classify the user's own callsign the filter is a no-op
+        // (otherwise we'd hide everything). If we can't classify the spotter
+        // we drop the spot - safer than letting unknown prefixes leak in.
+        if (!mine) return true;
+        if (!his || strcmp(mine, his) != 0) return false;
     }
     return true;
 }
@@ -118,6 +136,16 @@ static void drawFilters() {
                   s_bandPrev, s_bandPill, s_bandNext);
     drawFilterRow(filtersY() + 26, "MODE", cfg.filterMode,
                   s_modePrev, s_modePill, s_modeNext);
+
+    // Continent: when "my" is active we display "my [XX]" so the user can see
+    // which continent we inferred from their own callsign.
+    String contLabel = cfg.filterCont;
+    if (contLabel == "my") {
+        const char* mine = Callsign::continent(cfg.myCallsign);
+        contLabel = String("my [") + (mine ? mine : "??") + "]";
+    }
+    drawFilterRow(filtersY() + 52, "DE",   contLabel,
+                  s_contPrev, s_contPill, s_contNext);
 }
 
 static void drawScrollControls() {
@@ -220,6 +248,7 @@ void draw(bool full) {
     sig = sig * 31 + s_scroll;
     for (auto c : cfg.filterBand) sig = sig * 31 + c;
     for (auto c : cfg.filterMode) sig = sig * 31 + c;
+    for (auto c : cfg.filterCont) sig = sig * 31 + c;
 
     if (sig == s_lastDrawnSig) return;
     s_lastDrawnSig = sig;
@@ -242,6 +271,8 @@ void touch(int x, int y) {
     else if (s_bandNext.contains(x, y) || s_bandPill.contains(x, y)) { cycle(cfg.filterBand, kBands, kBandCount, +1); }
     else if (s_modePrev.contains(x, y)) { cycle(cfg.filterMode, kModes, kModeCount, -1); }
     else if (s_modeNext.contains(x, y) || s_modePill.contains(x, y)) { cycle(cfg.filterMode, kModes, kModeCount, +1); }
+    else if (s_contPrev.contains(x, y)) { cycle(cfg.filterCont, kConts, kContCount, -1); }
+    else if (s_contNext.contains(x, y) || s_contPill.contains(x, y)) { cycle(cfg.filterCont, kConts, kContCount, +1); }
     else {
         // Scroll buttons.
         int rows = s_visibleRows - 1;

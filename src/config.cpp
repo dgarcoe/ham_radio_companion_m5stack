@@ -46,6 +46,7 @@ static void applyJson(const String& json) {
     c.soundEnabled   = doc["soundEnabled"]   | c.soundEnabled;
     c.filterBand     = doc["filterBand"]     | c.filterBand;
     c.filterMode     = doc["filterMode"]     | c.filterMode;
+    c.filterCont     = doc["filterCont"]     | c.filterCont;
     c.tileHideMask   = doc["tileHideMask"]   | c.tileHideMask;
 
     if (doc["alerts"].is<JsonArray>()) {
@@ -77,6 +78,7 @@ static String currentJson() {
     doc["soundEnabled"]   = c.soundEnabled;
     doc["filterBand"]     = c.filterBand;
     doc["filterMode"]     = c.filterMode;
+    doc["filterCont"]     = c.filterCont;
     doc["tileHideMask"]   = c.tileHideMask;
 
     JsonArray arr = doc["alerts"].to<JsonArray>();

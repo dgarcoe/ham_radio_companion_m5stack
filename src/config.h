@@ -36,6 +36,7 @@ struct AppConfig {
     // DX list filters (UI only - alerts use their own per-rule filters).
     String filterBand = "any";   // "any", "160m", ..., "2m"
     String filterMode = "any";   // "any", "CW", "SSB", "FT8", "RTTY", "DIGI"
+    String filterCont = "any";   // "any" or "my" - filter spotter continent
 
     // Alerts
     std::vector<AlertRule> alerts;
