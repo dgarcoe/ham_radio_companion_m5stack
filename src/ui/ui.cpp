@@ -3,6 +3,7 @@
 
 #include <time.h>
 #include "../alerts.h"
+#include "../config.h"
 
 namespace Ui {
 
@@ -11,6 +12,28 @@ static bool s_needFullRedraw = true;
 static uint32_t s_lastPartialRedraw = 0;
 static uint32_t s_lastTouchMs = 0;
 static Rect s_backRect { 0, 0, 0, 0 };
+
+// Display power management.
+static uint32_t s_lastActivityMs = 0;
+static bool     s_displayAsleep  = false;
+static uint8_t  s_lastBrightness = 160;
+
+static void wakeDisplay() {
+    if (!s_displayAsleep) return;
+    auto& d = M5.Display;
+    d.wakeup();
+    d.setBrightness(s_lastBrightness ? s_lastBrightness : 160);
+    s_displayAsleep = false;
+    s_needFullRedraw = true;
+}
+
+static void sleepDisplay() {
+    if (s_displayAsleep) return;
+    auto& d = M5.Display;
+    s_displayAsleep = true;
+    d.setBrightness(0);
+    d.sleep();
+}
 
 static const char* screenTitle(Screen s) {
     switch (s) {
@@ -178,33 +201,54 @@ void begin() {
     auto& d = M5.Display;
     d.fillScreen(COL_BG);
     s_needFullRedraw = true;
+    s_lastActivityMs = millis();
+    s_lastBrightness = d.getBrightness();
+    if (s_lastBrightness == 0) s_lastBrightness = 160;
 }
 
 void loop() {
+    uint32_t now = millis();
+
     // Process touch and hardware buttons BEFORE drawing. This ensures that a
     // tap that lands just before a potentially long draw (e.g. the grayline
     // per-minute map refresh) is acted on immediately, and that navigation
     // requests set s_needFullRedraw before the draw block below decides which
     // screen to render.
     auto t = M5.Touch.getDetail();
-    if (t.wasPressed()) {
-        uint32_t now = millis();
-        if (now - s_lastTouchMs > 150) {
-            s_lastTouchMs = now;
-            dispatchTouch(t.x, t.y);
+    bool btnA = M5.BtnA.wasPressed();
+
+    if (t.wasPressed() || btnA) {
+        if (s_displayAsleep) {
+            // Wake without acting on the touch - the user expects the first
+            // tap to bring the screen back, not navigate.
+            wakeDisplay();
+            s_lastActivityMs = now;
+        } else {
+            s_lastActivityMs = now;
+            if (t.wasPressed() && now - s_lastTouchMs > 150) {
+                s_lastTouchMs = now;
+                dispatchTouch(t.x, t.y);
+            }
+            if (btnA && s_screen != Screen::Launcher) {
+                goHome();
+            }
         }
     }
-    if (M5.BtnA.wasPressed() && s_screen != Screen::Launcher) {
-        goHome();
+
+    // Idle-timeout: put the panel to sleep after the configured inactivity.
+    uint32_t idleTimeoutMs = (uint32_t)Config::get().screenOffSeconds * 1000UL;
+    if (!s_displayAsleep && idleTimeoutMs > 0 &&
+        now - s_lastActivityMs > idleTimeoutMs) {
+        sleepDisplay();
     }
+    if (s_displayAsleep) return;   // skip drawing while asleep
 
     if (s_needFullRedraw) {
         drawCurrentScreenChrome();
         dispatchDraw(true);
         s_needFullRedraw = false;
-        s_lastPartialRedraw = millis();
+        s_lastPartialRedraw = now;
     } else {
-        uint32_t now = millis();
         if (now - s_lastPartialRedraw > 1000) {
             s_lastPartialRedraw = now;
             // Header mini-clock refresh on non-launcher screens.

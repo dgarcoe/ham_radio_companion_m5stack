@@ -22,6 +22,12 @@ static String getPort()      { return String(Config::get().clusterPort); }
 static String getOffset()    { return String((int)Config::get().utcOffset); }
 static String getSound()     { return Config::get().soundEnabled ? "ON" : "OFF"; }
 static String getPropUrl()   { return Config::get().propagationUrl; }
+static String getScreenOff() {
+    uint16_t s = Config::get().screenOffSeconds;
+    if (s == 0) return "off";
+    if (s < 60) return String(s) + "s";
+    return String(s / 60) + "m";
+}
 
 static void editSsid()    { auto& v = Config::get().wifiSsid;       if (Ui::editString("WiFi SSID", &v))      { Config::save(); WifiMgr::reconnect(); } }
 static void editPass()    { auto& v = Config::get().wifiPass;       if (Ui::editString("WiFi Password", &v, true)) { Config::save(); WifiMgr::reconnect(); } }
@@ -39,6 +45,13 @@ static void editPort()    {
 static void editOffset()  { int v = Config::get().utcOffset; if (Ui::editInt("UTC offset (h)", &v, -12, 14)) { Config::get().utcOffset = (int8_t)v; Config::save(); } }
 static void toggleSound() { Config::get().soundEnabled = !Config::get().soundEnabled; Config::save(); }
 static void editPropUrl() { auto& v = Config::get().propagationUrl; if (Ui::editString("Propagation URL", &v, false, 80)) Config::save(); }
+static void editScreenOff() {
+    int v = Config::get().screenOffSeconds;
+    if (Ui::editInt("Screen off (s, 0=off)", &v, 0, 1800)) {
+        Config::get().screenOffSeconds = (uint16_t)v;
+        Config::save();
+    }
+}
 static String getHomeTiles() {
     uint32_t m = Config::get().tileHideMask;
     int hidden = 0;
@@ -57,6 +70,7 @@ static const Row s_rows[] = {
     { "Cluster Port",  getPort,    editPort    },
     { "UTC Offset",    getOffset,  editOffset  },
     { "Sound",         getSound,   toggleSound },
+    { "Screen off",    getScreenOff, editScreenOff },
     { "Prop URL",      getPropUrl, editPropUrl },
     { "Home Tiles",    getHomeTiles, editHomeTiles },
 };
@@ -129,6 +143,7 @@ void draw(bool full) {
     String sig = cfg.wifiSsid + "|" + String((int)cfg.wifiPass.length()) + "|" + cfg.myCallsign +
                  "|" + cfg.clusterHost + "|" + String(cfg.clusterPort) + "|" +
                  String((int)cfg.utcOffset) + "|" + (cfg.soundEnabled ? "1" : "0") +
+                 "|" + String((unsigned)cfg.screenOffSeconds) +
                  "|" + cfg.propagationUrl + "|s=" + String(s_scroll);
     if (sig == s_lastSig) return;
     s_lastSig = sig;

@@ -33,6 +33,10 @@ struct AppConfig {
     int8_t utcOffset = 0;     // hours offset for local time display
     bool soundEnabled = true; // audible alerts
 
+    // Idle timeout in seconds before the display is put to sleep.
+    // 0 disables the feature (screen always on).
+    uint16_t screenOffSeconds = 0;
+
     // DX list filters (UI only - alerts use their own per-rule filters).
     String filterBand = "any";   // "any", "160m", ..., "2m"
     String filterMode = "any";   // "any", "CW", "SSB", "FT8", "RTTY", "DIGI"

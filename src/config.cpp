@@ -44,6 +44,7 @@ static void applyJson(const String& json) {
     c.propagationUrl = doc["propagationUrl"] | c.propagationUrl;
     c.utcOffset      = doc["utcOffset"]      | c.utcOffset;
     c.soundEnabled   = doc["soundEnabled"]   | c.soundEnabled;
+    c.screenOffSeconds = doc["screenOffSeconds"] | c.screenOffSeconds;
     c.filterBand     = doc["filterBand"]     | c.filterBand;
     c.filterMode     = doc["filterMode"]     | c.filterMode;
     c.filterCont     = doc["filterCont"]     | c.filterCont;
@@ -76,6 +77,7 @@ static String currentJson() {
     doc["propagationUrl"] = c.propagationUrl;
     doc["utcOffset"]      = c.utcOffset;
     doc["soundEnabled"]   = c.soundEnabled;
+    doc["screenOffSeconds"] = c.screenOffSeconds;
     doc["filterBand"]     = c.filterBand;
     doc["filterMode"]     = c.filterMode;
     doc["filterCont"]     = c.filterCont;

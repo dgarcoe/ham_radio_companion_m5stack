@@ -15,13 +15,16 @@
   "utcOffset": 0,
   "soundEnabled": true,
 
+  "_screenOffSeconds": "Idle timeout in seconds before the display sleeps. 0 = always on. Tap the screen to wake.",
+  "screenOffSeconds": 0,
+
   "filterBand": "any",
   "filterMode": "any",
 
   "_filterCont": "Spotter-continent filter for the DX list. \"any\" or \"my\" - \"my\" shows only spots whose spotter (DE) is on the same continent as your callsign.",
   "filterCont": "any",
 
-  "_tileHideMask": "Bitmask of launcher tiles to hide. Bit 0=DX, 1=Prop, 2=Beacons, 3=POTA, 4=Alerts, 5=Bearing, 6=Sp.Wx, 7=Contests, 8=Grayline, 9=Satellites, 10=SOTA. Settings always visible.",
+  "_tileHideMask": "Bitmask of launcher tiles to hide. Bit 0=DX, 1=Prop, 2=Beacons, 3=POTA, 4=SOTA, 5=Alerts, 6=Bearing, 7=Sp.Wx, 8=Contests, 9=Grayline, 10=Satellites. Settings always visible.",
   "tileHideMask": 0,
 
   "alerts": [

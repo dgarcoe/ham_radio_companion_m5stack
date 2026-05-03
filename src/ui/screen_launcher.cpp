@@ -117,13 +117,13 @@ static const Tile kTiles[] = {
     { Screen::Propagation, "Prop",       Icons::PropIcon,     propStatus     },
     { Screen::Beacons,     "Beacons",    Icons::BeaconIcon,   beaconsStatus  },
     { Screen::Pota,        "POTA",       Icons::PotaIcon,     potaStatus     },
+    { Screen::Sota,        "SOTA",       Icons::SotaIcon,     sotaStatus     },
     { Screen::Alerts,      "Alerts",     Icons::AlertsIcon,   alertsStatus   },
     { Screen::Bearing,     "Bearing",    Icons::BearingIcon,  bearingStatus  },
     { Screen::Noaa,        "Sp.Wx",      Icons::NoaaIcon,     noaaStatus     },
     { Screen::Contests,    "Contest",    Icons::ContestIcon,  contestsStatus },
     { Screen::Grayline,    "Grayline",   Icons::GraylineIcon, graylineStatus },
     { Screen::Satellites,  "Sats",       Icons::SatelliteIcon,satellitesStatus },
-    { Screen::Sota,        "SOTA",       Icons::SotaIcon,     sotaStatus     },
     { Screen::Settings,    "Settings",   Icons::SettingsIcon, settingsStatus },
 };
 static constexpr int kTileCount = sizeof(kTiles) / sizeof(kTiles[0]);

@@ -15,13 +15,13 @@ static const ToggleRow kRows[] = {
     { "Propagation",    Screen::Propagation },
     { "NCDXF Beacons",  Screen::Beacons     },
     { "POTA",           Screen::Pota        },
+    { "SOTA",           Screen::Sota        },
     { "Alerts",         Screen::Alerts      },
     { "Bearing",        Screen::Bearing     },
     { "Space Weather",  Screen::Noaa        },
     { "Contest Cal.",   Screen::Contests    },
     { "Grayline",       Screen::Grayline    },
     { "Satellites",     Screen::Satellites  },
-    { "SOTA",           Screen::Sota        },
     { "Settings",       Screen::Settings    },
 };
 static constexpr int kRowCount = sizeof(kRows) / sizeof(kRows[0]);
