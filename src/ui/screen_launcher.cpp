@@ -124,7 +124,7 @@ static constexpr int kTileCount = sizeof(kTiles) / sizeof(kTiles[0]);
 
 struct TileHit { Rect r; int tileIdx; };
 static std::vector<TileHit> s_tileHits;
-static String s_lastSig;
+static String s_tileLastStatus[kTileCount];   // indexed by tile index
 static String s_lastClock;
 static String s_lastCall;
 static int    s_lastBatteryLevel = -1;
@@ -242,6 +242,23 @@ static void drawBanner(bool full) {
     drawBattery(full);
 }
 
+static void drawTileStatus(const Rect& r, const Tile& t, bool active) {
+    auto& d = M5.Display;
+    uint16_t bg = active ? COL_CARD_HI : COL_CARD;
+    // Clear only the bottom strip where the status text lives.
+    int sy = r.y + r.h - 14;
+    int sh = 12;
+    d.fillRect(r.x + 2, sy, r.w - 4, sh, bg);
+
+    String status = t.statusFn ? t.statusFn() : String("");
+    if (status.length()) {
+        d.setFont(&fonts::Font0);
+        d.setTextColor(COL_DIM, bg);
+        if (status.length() > 11) status = status.substring(0, 11);
+        d.drawString(status, r.x + r.w / 2, r.y + r.h - 10);
+    }
+}
+
 static void drawTile(const Rect& r, const Tile& t, bool active) {
     auto& d = M5.Display;
     uint16_t bg = active ? COL_CARD_HI : COL_CARD;
@@ -259,14 +276,7 @@ static void drawTile(const Rect& r, const Tile& t, bool active) {
     d.setTextDatum(top_center);
     d.drawString(t.label, r.x + r.w / 2, r.y + 22);
 
-    String status = t.statusFn ? t.statusFn() : String("");
-    if (status.length()) {
-        d.setFont(&fonts::Font0);
-        d.setTextColor(COL_DIM, bg);
-        // Tile is ~75 px wide; Font0 is ~6 px / char, so cap at ~11 chars.
-        if (status.length() > 11) status = status.substring(0, 11);
-        d.drawString(status, r.x + r.w / 2, r.y + r.h - 10);
-    }
+    drawTileStatus(r, t, active);
 }
 
 static void drawGrid(bool /*full*/) {
@@ -309,18 +319,40 @@ void draw(bool full) {
         d.fillScreen(COL_BG);
         drawBanner(true);
         drawGrid(true);
-        s_lastSig = "";
+        s_lastHideMask = Config::get().tileHideMask;
+        // Seed the per-tile status cache so subsequent partial redraws can
+        // detect actual changes.
+        for (int i = 0; i < kTileCount; i++) s_tileLastStatus[i] = "";
+        for (auto& h : s_tileHits) {
+            const Tile& t = kTiles[h.tileIdx];
+            s_tileLastStatus[h.tileIdx] = t.statusFn ? t.statusFn() : String("");
+        }
     }
 
     drawBanner(false);
 
+    // Tile-visibility changes need a full grid relayout.
     uint32_t mask = Config::get().tileHideMask;
-    String sig;
-    for (auto& t : kTiles) sig += (t.statusFn ? t.statusFn() : String("")) + "|";
-    if (sig != s_lastSig || mask != s_lastHideMask) {
-        s_lastSig = sig;
+    if (mask != s_lastHideMask) {
         s_lastHideMask = mask;
-        drawGrid(false);
+        drawGrid(true);
+        for (auto& h : s_tileHits) {
+            const Tile& t = kTiles[h.tileIdx];
+            s_tileLastStatus[h.tileIdx] = t.statusFn ? t.statusFn() : String("");
+        }
+        return;
+    }
+
+    // Otherwise refresh only the status strip of tiles whose text changed.
+    // This avoids wiping the whole grid on every status tick (which is the
+    // source of the visible flicker).
+    for (auto& h : s_tileHits) {
+        const Tile& t = kTiles[h.tileIdx];
+        String cur = t.statusFn ? t.statusFn() : String("");
+        if (cur != s_tileLastStatus[h.tileIdx]) {
+            s_tileLastStatus[h.tileIdx] = cur;
+            drawTileStatus(h.r, t, false);
+        }
     }
 }
 

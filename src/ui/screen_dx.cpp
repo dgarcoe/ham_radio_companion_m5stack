@@ -43,7 +43,7 @@ static Rect s_btnUp{0,0,0,0}, s_btnDown{0,0,0,0};
 // Filter rows live in the sub-header area + a few pixels of body, leaving the
 // rest of the body for the spot list.
 static int filtersY()    { return CONTENT_Y + 4; }
-static int filtersH()    { return 76; }
+static int filtersH()    { return 50; }
 static int listY()       { return filtersY() + filtersH() + 4; }
 static int listBottom()  { return SCREEN_H - 4; }
 static int listRightCol(){ return SCREEN_W - 30; }
@@ -128,6 +128,28 @@ static void drawFilterRow(int y, const char* label, const String& value,
     }
 }
 
+// Compact tap-to-toggle pill for filters with only two states (no prev/next
+// arrows). Returns the hit rect via outRect.
+static void drawTogglePill(int x, int y, int w, int h, const char* label,
+                           const String& value, bool active, Rect& outRect) {
+    auto& d = M5.Display;
+    d.setFont(&fonts::Font0);
+    d.setTextColor(COL_MUTED, COL_PANEL);
+    d.setTextDatum(middle_left);
+    d.drawString(label, x, y + h / 2);
+
+    int pillX = x + 24;
+    int pillW = w - 24;
+    uint16_t bg = active ? COL_ACCENT_D : COL_CARD;
+    d.fillRoundRect(pillX, y, pillW, h, 11, bg);
+    d.drawRoundRect(pillX, y, pillW, h, 11, active ? COL_ACCENT : COL_BORDER);
+    d.setTextColor(COL_FG, bg);
+    d.setTextDatum(middle_center);
+    d.setFont(&fonts::Font2);
+    d.drawString(value, pillX + pillW / 2, y + h / 2);
+    outRect = { pillX, y, pillW, h };
+}
+
 static void drawFilters() {
     auto& cfg = Config::get();
     auto& d = M5.Display;
@@ -137,15 +159,21 @@ static void drawFilters() {
     drawFilterRow(filtersY() + 26, "MODE", cfg.filterMode,
                   s_modePrev, s_modePill, s_modeNext);
 
-    // Continent: when "my" is active we display "my [XX]" so the user can see
-    // which continent we inferred from their own callsign.
+    // Continent toggle: sits on the right side of the MODE row so we don't
+    // need a third row. When "my" is active we show "my [XX]" so the user
+    // can see which continent we inferred from their own callsign.
     String contLabel = cfg.filterCont;
+    bool contActive = (contLabel != "any");
     if (contLabel == "my") {
         const char* mine = Callsign::continent(cfg.myCallsign);
         contLabel = String("my [") + (mine ? mine : "??") + "]";
     }
-    drawFilterRow(filtersY() + 52, "DE",   contLabel,
-                  s_contPrev, s_contPill, s_contNext);
+    // Hide-handles for the prev/next arrows are unused for the DE pill;
+    // collapse them to zero-size so they never match a touch.
+    s_contPrev = {0,0,0,0};
+    s_contNext = {0,0,0,0};
+    drawTogglePill(190, filtersY() + 26, 122, 22,
+                   "DE", contLabel, contActive, s_contPill);
 }
 
 static void drawScrollControls() {
