@@ -87,6 +87,7 @@ static void drawMap(time_t now) {
     // Fill day/night per column using the terminator latitude. For each x we
     // solve sin(d) sin(l) + cos(d) cos(l) cos(lon - subLon) = 0.
     for (int x = 0; x < SCREEN_W; x++) {
+        if ((x & 63) == 0) yieldToSystem();   // keep touch IC alive
         float lon = -180.0f + x * 360.0f / SCREEN_W;
         float lonDiffR = deg2rad(lon - subLon);
         float cosDiff = cosf(lonDiffR);
@@ -178,6 +179,7 @@ static void drawMap(time_t now) {
                                      // and gives a useful "where's the band
                                      // open?" indicator.
     for (int y = s_mapY0; y < s_mapY0 + s_mapH; y += 1) {
+        if ((y & 15) == 0) yieldToSystem();   // keep touch IC alive
         float lat = 90.0f - (y - s_mapY0) * 180.0f / s_mapH;
         bool prevAbove = false;
         for (int x = 0; x < SCREEN_W; x++) {

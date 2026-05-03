@@ -10,6 +10,7 @@
 #include "noaa.h"
 #include "contests.h"
 #include "satellites.h"
+#include "sota.h"
 #include "ui/ui.h"
 
 static void serialBanner() {
@@ -44,6 +45,7 @@ void setup() {
     Noaa::begin();
     Contests::begin();
     Satellites::begin();
+    Sota::begin();
     Alerts::begin();
     Ui::begin();
 }
@@ -58,6 +60,7 @@ void loop() {
     Noaa::loop();
     Contests::loop();
     Satellites::loop();
+    Sota::loop();
     Alerts::loop();
     Ui::loop();
 

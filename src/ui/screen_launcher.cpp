@@ -14,6 +14,7 @@
 #include "../contests.h"
 #include "../sun.h"
 #include "../satellites.h"
+#include "../sota.h"
 
 namespace Ui { namespace ScreenLauncher {
 
@@ -105,6 +106,10 @@ static String satellitesStatus() {
     if (delta < 86400) return "in " + String(delta / 3600) + "h";
     return "in " + String(delta / 86400) + "d";
 }
+static String sotaStatus() {
+    if (Sota::lastFetchAgeSeconds() == UINT32_MAX) return Sota::status();
+    return String((unsigned)Sota::spotCount()) + " spots";
+}
 static String settingsStatus(){ return Config::loadSource(); }
 
 static const Tile kTiles[] = {
@@ -118,6 +123,7 @@ static const Tile kTiles[] = {
     { Screen::Contests,    "Contest",    Icons::ContestIcon,  contestsStatus },
     { Screen::Grayline,    "Grayline",   Icons::GraylineIcon, graylineStatus },
     { Screen::Satellites,  "Sats",       Icons::SatelliteIcon,satellitesStatus },
+    { Screen::Sota,        "SOTA",       Icons::SotaIcon,     sotaStatus     },
     { Screen::Settings,    "Settings",   Icons::SettingsIcon, settingsStatus },
 };
 static constexpr int kTileCount = sizeof(kTiles) / sizeof(kTiles[0]);

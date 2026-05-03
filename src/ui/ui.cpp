@@ -24,6 +24,7 @@ static const char* screenTitle(Screen s) {
         case Screen::Contests:    return "Contest Calendar";
         case Screen::Grayline:    return "Grayline Map";
         case Screen::Satellites:  return "Satellite Passes";
+        case Screen::Sota:        return "SOTA Spots";
         case Screen::Settings:    return "Settings";
         case Screen::HomeTiles:   return "Home Tiles";
         default:                  return "";
@@ -142,6 +143,7 @@ static void dispatchDraw(bool full) {
         case Screen::Contests:    ScreenContests::draw(full); break;
         case Screen::Grayline:    ScreenGrayline::draw(full); break;
         case Screen::Satellites:  ScreenSatellites::draw(full); break;
+        case Screen::Sota:        ScreenSota::draw(full); break;
         case Screen::Settings:    ScreenSettings::draw(full); break;
         case Screen::HomeTiles:   ScreenHomeTiles::draw(full); break;
         default: break;
@@ -165,6 +167,7 @@ static void dispatchTouch(int x, int y) {
         case Screen::Contests:    ScreenContests::touch(x, y); break;
         case Screen::Grayline:    ScreenGrayline::touch(x, y); break;
         case Screen::Satellites:  ScreenSatellites::touch(x, y); break;
+        case Screen::Sota:        ScreenSota::touch(x, y); break;
         case Screen::Settings:    ScreenSettings::touch(x, y); break;
         case Screen::HomeTiles:   ScreenHomeTiles::touch(x, y); break;
         default: break;
@@ -178,6 +181,23 @@ void begin() {
 }
 
 void loop() {
+    // Process touch and hardware buttons BEFORE drawing. This ensures that a
+    // tap that lands just before a potentially long draw (e.g. the grayline
+    // per-minute map refresh) is acted on immediately, and that navigation
+    // requests set s_needFullRedraw before the draw block below decides which
+    // screen to render.
+    auto t = M5.Touch.getDetail();
+    if (t.wasPressed()) {
+        uint32_t now = millis();
+        if (now - s_lastTouchMs > 150) {
+            s_lastTouchMs = now;
+            dispatchTouch(t.x, t.y);
+        }
+    }
+    if (M5.BtnA.wasPressed() && s_screen != Screen::Launcher) {
+        goHome();
+    }
+
     if (s_needFullRedraw) {
         drawCurrentScreenChrome();
         dispatchDraw(true);
@@ -205,20 +225,6 @@ void loop() {
             }
             dispatchDraw(false);
         }
-    }
-
-    auto t = M5.Touch.getDetail();
-    if (t.wasPressed()) {
-        uint32_t now = millis();
-        if (now - s_lastTouchMs > 150) {
-            s_lastTouchMs = now;
-            dispatchTouch(t.x, t.y);
-        }
-    }
-
-    // Hardware Button A on Core2 returns to the launcher.
-    if (M5.BtnA.wasPressed() && s_screen != Screen::Launcher) {
-        goHome();
     }
 
     maybeShowAlertBanner();

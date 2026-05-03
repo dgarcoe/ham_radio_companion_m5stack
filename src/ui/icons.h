@@ -23,6 +23,7 @@ extern const char* const NoaaIcon[H];       // warning triangle
 extern const char* const ContestIcon[H];    // trophy
 extern const char* const GraylineIcon[H];   // globe with terminator
 extern const char* const SatelliteIcon[H];  // satellite body with solar panels
+extern const char* const SotaIcon[H];       // mountain peak (summits on the air)
 
 // Draw at (x, y) (top-left), pixels in `color`. Transparent pixels are not
 // touched, so this composites cleanly over an existing background.

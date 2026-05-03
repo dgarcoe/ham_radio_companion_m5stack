@@ -46,7 +46,8 @@ namespace ScreenNoaa    { void draw(bool full); void touch(int x, int y); }
 namespace ScreenContests{ void draw(bool full); void touch(int x, int y); }
 namespace ScreenGrayline{ void draw(bool full); void touch(int x, int y); }
 namespace ScreenSatellites{ void draw(bool full); void touch(int x, int y); }
-namespace ScreenSettings{ void draw(bool full); void touch(int x, int y); }
+namespace ScreenSota     { void draw(bool full); void touch(int x, int y); }
+namespace ScreenSettings { void draw(bool full); void touch(int x, int y); }
 namespace ScreenHomeTiles{ void draw(bool full); void touch(int x, int y); }
 
 // Geometry helpers shared between screens.
@@ -74,5 +75,18 @@ void maybeShowAlertBanner();
 // Hit rect of the back button drawn by drawHeader (only valid on non-launcher
 // screens). Provided so screens can early-out before checking other targets.
 Rect backButtonRect();
+
+// Yield helper for expensive draw routines. Calls M5.update() at most every
+// 40 ms so the touch IC's registers are refreshed while we are blocked inside
+// a long draw; without this a tap during a multi-hundred-ms redraw (e.g.
+// grayline) is silently lost before the main loop can latch it.
+inline void yieldToSystem() {
+    static uint32_t lastYield = 0;
+    uint32_t now = millis();
+    if (now - lastYield >= 40) {
+        lastYield = now;
+        M5.update();
+    }
+}
 
 }

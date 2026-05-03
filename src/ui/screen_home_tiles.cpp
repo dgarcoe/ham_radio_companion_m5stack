@@ -21,6 +21,7 @@ static const ToggleRow kRows[] = {
     { "Contest Cal.",   Screen::Contests    },
     { "Grayline",       Screen::Grayline    },
     { "Satellites",     Screen::Satellites  },
+    { "SOTA",           Screen::Sota        },
     { "Settings",       Screen::Settings    },
 };
 static constexpr int kRowCount = sizeof(kRows) / sizeof(kRows[0]);

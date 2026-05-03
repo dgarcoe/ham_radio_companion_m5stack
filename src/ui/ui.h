@@ -16,6 +16,7 @@ enum class Screen {
     Contests,
     Grayline,
     Satellites,
+    Sota,
     Settings,
     HomeTiles,
     Count
