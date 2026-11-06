@@ -31,7 +31,16 @@ void setup() {
     cfg.output_power = true;
     M5.begin(cfg);
     M5.Display.setBrightness(160);
+    // Ensure landscape 320x240. setRotation(1) is correct for M5Unified 0.2.x;
+    // if a library update changes the convention, try rotations until we get
+    // the expected dimensions.
     M5.Display.setRotation(1);
+    if (M5.Display.width() != 320 || M5.Display.height() != 240) {
+        for (int r = 0; r < 4; r++) {
+            M5.Display.setRotation(r);
+            if (M5.Display.width() == 320 && M5.Display.height() == 240) break;
+        }
+    }
 
     Serial.begin(115200);
 
